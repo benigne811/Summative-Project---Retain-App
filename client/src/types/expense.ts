@@ -9,6 +9,7 @@ export type PaymentMethod =
 export interface Expense {
   id: string
   title: string
+  description?: string
   amount: number
   categoryId: string
   date: string
