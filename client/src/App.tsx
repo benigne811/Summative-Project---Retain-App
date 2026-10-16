@@ -1,10 +1,10 @@
+
+import { useState, type FormEvent } from 'react'
 import {
   ArrowDownLeft,
   Bell,
   CalendarDays,
-  ChartNoAxesCombined,
   ChevronDown,
-  CircleHelp,
   CreditCard,
   LayoutDashboard,
   LogOut,
@@ -17,51 +17,38 @@ import {
   TrendingUp,
   Wallet,
   X,
+  ChartNoAxesCombined,
+  CircleHelp,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useAppDispatch, useAppSelector } from './app/hooks'
+import { addExpense, setSearch } from './features/expenses/expenseSlice'
+import { useExpenses } from './features/expenses/useExpenses'
+import type { Expense } from './types/expense'
 
-const expenses = [
-  {
-    id: 1,
-    title: 'Grocery shopping',
-    category: 'Food & Groceries',
-    date: 'Oct 13, 2026',
-    payment: 'Mobile Money',
-    amount: 28500,
-    icon: ShoppingBag,
-    color: 'bg-orange-100 text-orange-600',
-  },
-  {
-    id: 2,
-    title: 'Monthly internet',
-    category: 'Bills & Utilities',
-    date: 'Oct 12, 2026',
-    payment: 'Bank transfer',
-    amount: 18000,
-    icon: CreditCard,
-    color: 'bg-blue-100 text-blue-600',
-  },
-  {
-    id: 3,
-    title: 'Lunch with friends',
-    category: 'Food & Groceries',
-    date: 'Oct 11, 2026',
-    payment: 'Mobile Money',
-    amount: 12500,
-    icon: Wallet,
-    color: 'bg-pink-100 text-pink-600',
-  },
-  {
-    id: 4,
-    title: 'Transport',
-    category: 'Transportation',
-    date: 'Oct 10, 2026',
-    payment: 'Cash',
-    amount: 6500,
-    icon: CreditCard,
-    color: 'bg-purple-100 text-purple-600',
-  },
+type Category = {
+  id: string
+  name: string
+  color?: string
+}
+
+const categories: Category[] = [
+  { id: 'food', name: 'Food & Dining', color: '#10b981' },
+  { id: 'transport', name: 'Transport', color: '#3b82f6' },
+  { id: 'housing', name: 'Housing', color: '#f97316' },
+  { id: 'shopping', name: 'Shopping', color: '#8b5cf6' },
+  { id: 'bills', name: 'Bills & Utilities', color: '#eab308' },
+  { id: 'health', name: 'Health', color: '#ef4444' },
+  { id: 'entertainment', name: 'Entertainment', color: '#ec4899' },
+  { id: 'other', name: 'Other', color: '#64748b' },
 ]
+
+type ExpenseFormValues = {
+  title: string
+  amount: number
+  date: string
+  categoryId: string
+  paymentMethod: Expense['paymentMethod']
+}
 
 const navigation = [
   { label: 'Dashboard', icon: LayoutDashboard },
@@ -83,19 +70,192 @@ function formatCurrency(amount: number) {
   }).format(amount)
 }
 
+function formatDate(date: string) {
+  if (!date) return '—'
+
+  return new Date(`${date}T00:00:00`).toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
+}
+
+function ExpenseForm({
+  categories,
+  onSubmit,
+  onCancel,
+}: {
+  categories: Category[]
+  onSubmit: (values: ExpenseFormValues) => void
+  onCancel: () => void
+}) {
+  const [title, setTitle] = useState('')
+  const [amount, setAmount] = useState('')
+  const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
+  const [categoryId, setCategoryId] = useState(categories[0]?.id ?? '')
+  const [paymentMethod, setPaymentMethod] = useState<Expense['paymentMethod']>('Cash')
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const numericAmount = Number(amount)
+
+    if (!title.trim() || !date || !categoryId || numericAmount <= 0) return
+
+    onSubmit({
+      title: title.trim(),
+      amount: numericAmount,
+      date,
+      categoryId,
+      paymentMethod,
+    })
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <label className="block text-sm font-medium text-slate-700">
+        Expense title
+        <input
+          required
+          value={title}
+          onChange={(event) => setTitle(event.target.value)}
+          placeholder="e.g. Groceries"
+          className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 outline-none focus:border-emerald-500"
+        />
+      </label>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <label className="block text-sm font-medium text-slate-700">
+          Amount
+          <input
+            required
+            min="1"
+            step="1"
+            type="number"
+            value={amount}
+            onChange={(event) => setAmount(event.target.value)}
+            className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 outline-none focus:border-emerald-500"
+          />
+        </label>
+        <label className="block text-sm font-medium text-slate-700">
+          Date
+          <input
+            required
+            type="date"
+            value={date}
+            onChange={(event) => setDate(event.target.value)}
+            className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 outline-none focus:border-emerald-500"
+          />
+        </label>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <label className="block text-sm font-medium text-slate-700">
+          Category
+          <select
+            required
+            value={categoryId}
+            onChange={(event) => setCategoryId(event.target.value)}
+            className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none focus:border-emerald-500"
+          >
+            {categories.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="block text-sm font-medium text-slate-700">
+          Payment method
+          <select
+            value={paymentMethod}
+         onChange={(event) =>
+  setPaymentMethod(event.target.value as Expense['paymentMethod'])
+}
+            className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none focus:border-emerald-500"
+          >
+            <option>Cash</option>
+            <option>Card</option>
+            <option>Bank transfer</option>
+            <option>Mobile money</option>
+          </select>
+        </label>
+      </div>
+
+      <div className="flex justify-end gap-3 pt-3">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-100"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          className="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700"
+        >
+          Save expense
+        </button>
+      </div>
+    </form>
+  )
+}
+
 function App() {
+  const dispatch = useAppDispatch()
+  const allExpenses = useAppSelector((state) => state.expenses.items)
+  const searchQuery = useAppSelector((state) => state.expenses.filters.search)
+  const { filteredExpenses } = useExpenses()
+
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [activePage, setActivePage] = useState('Dashboard')
-  const [searchQuery, setSearchQuery] = useState('')
+  const [showExpenseForm, setShowExpenseForm] = useState(false)
 
-  const filteredExpenses = expenses.filter((expense) =>
-    expense.title.toLowerCase().includes(searchQuery.toLowerCase()),
+  const currentMonth = new Date().toISOString().slice(0, 7)
+  const monthlyExpenses = allExpenses.filter((expense) =>
+    expense.date.startsWith(currentMonth),
   )
-
-  const spent = 385000
+  const spent = monthlyExpenses.reduce(
+    (total, expense) => total + expense.amount,
+    0,
+  )
   const budget = 600000
   const remaining = budget - spent
-  const budgetPercentage = (spent / budget) * 100
+  const budgetPercentage = Math.min((spent / budget) * 100, 100)
+  const highestExpense = monthlyExpenses.reduce<Expense | undefined>(
+    (highest, expense) =>
+      !highest || expense.amount > highest.amount ? expense : highest,
+    undefined,
+  )
+
+  const categorySpending = categories
+    .map((category) => ({
+      ...category,
+      amount: monthlyExpenses
+        .filter((expense) => expense.categoryId === category.id)
+        .reduce((total, expense) => total + expense.amount, 0),
+    }))
+    .filter((category) => category.amount > 0)
+    .sort((a, b) => b.amount - a.amount)
+    .slice(0, 4)
+
+  function handleAddExpense(values: ExpenseFormValues) {
+    const newExpense: Expense = {
+      ...values,
+      id: `expense-${Date.now()}`,
+      createdAt: new Date().toISOString(),
+    }
+
+    dispatch(addExpense(newExpense))
+    setShowExpenseForm(false)
+    setActivePage('Expenses')
+  }
+
+  const today = new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  })
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800">
@@ -157,7 +317,7 @@ function App() {
                 {label}
                 {label === 'Expenses' && (
                   <span className="ml-auto rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">
-                    {expenses.length}
+                    {allExpenses.length}
                   </span>
                 )}
               </button>
@@ -243,7 +403,7 @@ function App() {
               <Search size={17} className="text-slate-400" />
               <input
                 value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
+                onChange={(event) => dispatch(setSearch(event.target.value))}
                 placeholder="Search expenses..."
                 className="w-36 bg-transparent text-sm outline-none placeholder:text-slate-400 lg:w-48"
               />
@@ -275,9 +435,7 @@ function App() {
         <div className="mx-auto max-w-7xl space-y-7 p-4 sm:p-8">
           <section className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
             <div>
-              <p className="text-sm font-medium text-emerald-700">
-                Tuesday, October 13, 2026
-              </p>
+              <p className="text-sm font-medium text-emerald-700">{today}</p>
               <h2 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
                 Welcome back!
               </h2>
@@ -286,7 +444,10 @@ function App() {
               </p>
             </div>
 
-            <button className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700">
+            <button
+              onClick={() => setShowExpenseForm(true)}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+            >
               <Plus size={18} />
               Add expense
             </button>
@@ -307,7 +468,10 @@ function App() {
               </p>
               <p className="mt-2 flex items-center gap-1 text-xs text-slate-500">
                 <CalendarDays size={14} />
-                October 2026
+                {new Date().toLocaleDateString('en-US', {
+                  month: 'long',
+                  year: 'numeric',
+                })}
               </p>
             </div>
 
@@ -344,29 +508,20 @@ function App() {
                 </span>
               </div>
               <p className="mt-4 text-2xl font-bold tracking-tight text-slate-900">
-                {formatCurrency(45000)}
+                {formatCurrency(highestExpense?.amount ?? 0)}
               </p>
               <p className="mt-2 text-xs text-slate-500">
-                Rent & accommodation
+                {highestExpense?.title ?? 'No expenses recorded this month'}
               </p>
             </div>
           </section>
 
           <section className="grid gap-6 xl:grid-cols-5">
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm xl:col-span-3 sm:p-6">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <h3 className="font-bold text-slate-900">
-                    Monthly spending
-                  </h3>
-                  <p className="mt-1 text-sm text-slate-500">
-                    Keep an eye on your monthly budget.
-                  </p>
-                </div>
-                <span className="rounded-lg bg-slate-50 px-3 py-2 text-xs font-medium text-slate-600">
-                  October 2026
-                </span>
-              </div>
+              <h3 className="font-bold text-slate-900">Monthly spending</h3>
+              <p className="mt-1 text-sm text-slate-500">
+                Keep an eye on your monthly budget.
+              </p>
 
               <div className="mt-8 grid grid-cols-2 gap-4">
                 <div>
@@ -402,11 +557,14 @@ function App() {
                   </span>
                   <div>
                     <p className="text-sm font-semibold text-emerald-900">
-                      You're within your budget!
+                      {remaining >= 0
+                        ? "You're within your budget!"
+                        : "You've exceeded your budget."}
                     </p>
                     <p className="mt-1 text-xs leading-5 text-emerald-800">
-                      You still have {formatCurrency(remaining)} available for
-                      the rest of the month.
+                      {remaining >= 0
+                        ? `You still have ${formatCurrency(remaining)} available this month.`
+                        : `You're ${formatCurrency(Math.abs(remaining))} over your monthly limit.`}
                     </p>
                   </div>
                 </div>
@@ -420,29 +578,38 @@ function App() {
               </p>
 
               <div className="mt-6 space-y-6">
-                {[
-                  { label: 'Food & groceries', amount: 120000, percent: 65, color: 'bg-emerald-500' },
-                  { label: 'Bills & utilities', amount: 85000, percent: 45, color: 'bg-blue-500' },
-                  { label: 'Transportation', amount: 60000, percent: 32, color: 'bg-orange-500' },
-                  { label: 'Shopping', amount: 45000, percent: 24, color: 'bg-purple-500' },
-                ].map((category) => (
-                  <div key={category.label}>
-                    <div className="mb-2 flex items-center justify-between gap-2">
-                      <span className="text-sm text-slate-600">
-                        {category.label}
-                      </span>
-                      <span className="text-sm font-semibold text-slate-800">
-                        {formatCurrency(category.amount)}
-                      </span>
+                {categorySpending.length > 0 ? (
+                  categorySpending.map((category) => (
+                    <div key={category.id}>
+                      <div className="mb-2 flex items-center justify-between gap-2">
+                        <span className="text-sm text-slate-600">
+                          {category.name}
+                        </span>
+                        <span className="text-sm font-semibold text-slate-800">
+                          {formatCurrency(category.amount)}
+                        </span>
+                      </div>
+                      <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+                        <div
+                          className="h-full rounded-full bg-emerald-500"
+                          style={{
+                            width: `${Math.min(
+                              (category.amount /
+                                Math.max(...categorySpending.map((item) => item.amount))) *
+                                100,
+                              100,
+                            )}%`,
+                            backgroundColor: category.color,
+                          }}
+                        />
+                      </div>
                     </div>
-                    <div className="h-2 overflow-hidden rounded-full bg-slate-100">
-                      <div
-                        className={`h-full rounded-full ${category.color}`}
-                        style={{ width: `${category.percent}%` }}
-                      />
-                    </div>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <p className="py-8 text-center text-sm text-slate-500">
+                    Add an expense to see your category breakdown.
+                  </p>
+                )}
               </div>
             </div>
           </section>
@@ -452,7 +619,7 @@ function App() {
               <div>
                 <h3 className="font-bold text-slate-900">Recent expenses</h3>
                 <p className="mt-1 text-sm text-slate-500">
-                  Your latest transactions.
+                  Your recorded transactions.
                 </p>
               </div>
               <button
@@ -474,33 +641,33 @@ function App() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {filteredExpenses.map((expense) => {
-                    const Icon = expense.icon
+                  {filteredExpenses.slice(0, 10).map((expense) => {
+                    const category = categories.find(
+                      (item) => item.id === expense.categoryId,
+                    )
 
                     return (
                       <tr key={expense.id} className="hover:bg-slate-50/70">
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
-                            <span
-                              className={`flex h-10 w-10 items-center justify-center rounded-xl ${expense.color}`}
-                            >
-                              <Icon size={19} />
+                            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                              <ShoppingBag size={19} />
                             </span>
                             <div>
                               <p className="text-sm font-semibold text-slate-800">
                                 {expense.title}
                               </p>
                               <p className="mt-1 text-xs text-slate-500">
-                                {expense.category}
+                                {category?.name ?? 'Uncategorized'}
                               </p>
                             </div>
                           </div>
                         </td>
                         <td className="px-6 py-4 text-sm text-slate-500">
-                          {expense.date}
+                          {formatDate(expense.date)}
                         </td>
                         <td className="px-6 py-4 text-sm text-slate-500">
-                          {expense.payment}
+                          {expense.paymentMethod}
                         </td>
                         <td className="px-6 py-4 text-right text-sm font-semibold text-slate-900">
                           {formatCurrency(expense.amount)}
@@ -515,7 +682,9 @@ function App() {
                         colSpan={4}
                         className="px-6 py-10 text-center text-sm text-slate-500"
                       >
-                        No expenses match your search.
+                        {searchQuery
+                          ? 'No expenses match your search.'
+                          : 'No expenses yet. Select Add expense to record your first transaction.'}
                       </td>
                     </tr>
                   )}
@@ -525,10 +694,11 @@ function App() {
 
             <div className="flex items-center justify-between border-t border-slate-100 px-6 py-4">
               <p className="text-xs text-slate-500">
-                Showing {filteredExpenses.length} of {expenses.length} expenses
+                Showing {Math.min(filteredExpenses.length, 10)} of{' '}
+                {filteredExpenses.length} matching expenses
               </p>
               <button
-                onClick={() => setSearchQuery('')}
+                onClick={() => dispatch(setSearch(''))}
                 className="text-xs font-semibold text-emerald-700 hover:underline"
               >
                 Clear search
@@ -541,6 +711,51 @@ function App() {
           </footer>
         </div>
       </main>
+
+      {showExpenseForm && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setShowExpenseForm(false)
+            }
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="expense-dialog-title"
+            className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl"
+          >
+            <div className="mb-6 flex items-start justify-between">
+              <div>
+                <h2
+                  id="expense-dialog-title"
+                  className="text-xl font-bold text-slate-900"
+                >
+                  Add an expense
+                </h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  Enter the details of your transaction.
+                </p>
+              </div>
+              <button
+                aria-label="Close expense form"
+                onClick={() => setShowExpenseForm(false)}
+                className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <ExpenseForm
+              categories={categories}
+              onSubmit={handleAddExpense}
+              onCancel={() => setShowExpenseForm(false)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   )
 }

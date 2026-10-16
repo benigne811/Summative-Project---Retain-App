@@ -53,22 +53,12 @@ export const selectFilteredExpenses = createSelector(
     })
 
     return [...filtered].sort((a, b) => {
-      let comparison = 0
-
-      switch (filters.sortBy) {
-        case 'amount':
-          comparison = a.amount - b.amount
-          break
-
-        case 'title':
-          comparison = a.title.localeCompare(b.title)
-          break
-
-        case 'date':
-        default:
-          comparison = a.date.localeCompare(b.date)
-          break
-      }
+      const comparison =
+        filters.sortBy === 'amount'
+          ? a.amount - b.amount
+          : filters.sortBy === 'title'
+            ? a.title.localeCompare(b.title)
+            : a.date.localeCompare(b.date)
 
       return filters.sortDirection === 'asc'
         ? comparison
