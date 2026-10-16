@@ -1,4 +1,6 @@
 
+import { useState, type FormEvent } from 'react'
+import { Pencil, Trash2, X } from 'lucide-react'
 import { useAppDispatch, useAppSelector } from '../app/hooks'
 import {
   setSearch,
@@ -8,12 +10,15 @@ import {
   setCurrentPage,
   setPageSize,
   clearFilters,
+  updateExpense,
+  deleteExpense,
 } from '../features/expenses/expenseSlice'
 import {
   selectFilteredExpenses,
   selectPaginatedExpenses,
   selectPaginationInfo,
 } from '../features/expenses/expenseSelectors'
+import type { Expense, PaymentMethod } from '../types/expense'
 
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat('en-RW', {
@@ -33,6 +38,209 @@ function formatDate(date: string) {
   })
 }
 
+const paymentMethods: PaymentMethod[] = [
+  'Cash',
+  'Mobile Money',
+  'Bank transfer',
+  'Card',
+  'Other',
+]
+
+type ExpenseEditorProps = {
+  expense: Expense
+  categories: { id: string; name: string }[]
+  onSave: (expense: Expense) => void
+  onCancel: () => void
+}
+
+function ExpenseEditor({
+  expense,
+  categories,
+  onSave,
+  onCancel,
+}: ExpenseEditorProps) {
+  const [title, setTitle] = useState(expense.title)
+  const [description, setDescription] = useState(expense.description ?? '')
+  const [amount, setAmount] = useState(String(expense.amount))
+  const [categoryId, setCategoryId] = useState(expense.categoryId)
+  const [date, setDate] = useState(expense.date)
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(
+    expense.paymentMethod,
+  )
+  const [notes, setNotes] = useState(expense.notes ?? '')
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    const numericAmount = Number(amount)
+
+    if (!title.trim() || !date || !categoryId || !Number.isFinite(numericAmount) || numericAmount <= 0) {
+      return
+    }
+
+    onSave({
+      ...expense,
+      title: title.trim(),
+      description: description.trim(),
+      amount: numericAmount,
+      categoryId,
+      date,
+      paymentMethod,
+      notes: notes.trim(),
+      updatedAt: new Date().toISOString(),
+    })
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onCancel()
+      }}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="edit-expense-title"
+        className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl"
+      >
+        <div className="mb-6 flex items-start justify-between">
+          <div>
+            <h2
+              id="edit-expense-title"
+              className="text-xl font-bold text-slate-900"
+            >
+              Edit expense
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Update your transaction details.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            aria-label="Close edit form"
+            onClick={onCancel}
+            className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <label className="block text-sm font-medium text-slate-700">
+            Expense title
+            <input
+              required
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 outline-none focus:border-emerald-500"
+            />
+          </label>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="block text-sm font-medium text-slate-700">
+              Amount (RWF)
+              <input
+                required
+                min="1"
+                step="1"
+                type="number"
+                value={amount}
+                onChange={(event) => setAmount(event.target.value)}
+                className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 outline-none focus:border-emerald-500"
+              />
+            </label>
+
+            <label className="block text-sm font-medium text-slate-700">
+              Date
+              <input
+                required
+                type="date"
+                value={date}
+                onChange={(event) => setDate(event.target.value)}
+                className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 outline-none focus:border-emerald-500"
+              />
+            </label>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="block text-sm font-medium text-slate-700">
+              Category
+              <select
+                required
+                value={categoryId}
+                onChange={(event) => setCategoryId(event.target.value)}
+                className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none focus:border-emerald-500"
+              >
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="block text-sm font-medium text-slate-700">
+              Payment method
+              <select
+                value={paymentMethod}
+                onChange={(event) =>
+                  setPaymentMethod(event.target.value as PaymentMethod)
+                }
+                className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none focus:border-emerald-500"
+              >
+                {paymentMethods.map((method) => (
+                  <option key={method} value={method}>
+                    {method}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <label className="block text-sm font-medium text-slate-700">
+            Description (optional)
+            <textarea
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              rows={2}
+              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 outline-none focus:border-emerald-500"
+            />
+          </label>
+
+          <label className="block text-sm font-medium text-slate-700">
+            Notes (optional)
+            <textarea
+              value={notes}
+              onChange={(event) => setNotes(event.target.value)}
+              rows={2}
+              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 outline-none focus:border-emerald-500"
+            />
+          </label>
+
+          <div className="flex justify-end gap-3 pt-3">
+            <button
+              type="button"
+              onClick={onCancel}
+              className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-100"
+            >
+              Cancel
+            </button>
+
+            <button
+              type="submit"
+              className="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700"
+            >
+              Save changes
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 export default function ExpensesPage() {
   const dispatch = useAppDispatch()
 
@@ -42,12 +250,29 @@ export default function ExpensesPage() {
   const pagination = useAppSelector(selectPaginationInfo)
   const filteredExpenses = useAppSelector(selectFilteredExpenses)
 
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null)
+
+  function handleSaveExpense(updatedExpense: Expense) {
+    dispatch(updateExpense(updatedExpense))
+    setEditingExpense(null)
+  }
+
+  function handleDeleteExpense(expense: Expense) {
+    const confirmed = window.confirm(
+      `Are you sure you want to delete "${expense.title}"? This action cannot be undone.`,
+    )
+
+    if (confirmed) {
+      dispatch(deleteExpense(expense.id))
+    }
+  }
+
   return (
     <section className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold text-slate-900">All expenses</h2>
         <p className="mt-1 text-sm text-slate-500">
-          Search, filter, and organize your transactions.
+          Search, filter, edit, and organize your transactions.
         </p>
       </div>
 
@@ -66,7 +291,9 @@ export default function ExpensesPage() {
           Category
           <select
             value={filters.categoryId}
-            onChange={(event) => dispatch(setCategoryFilter(event.target.value))}
+            onChange={(event) =>
+              dispatch(setCategoryFilter(event.target.value))
+            }
             className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none focus:border-emerald-500"
           >
             <option value="all">All categories</option>
@@ -88,11 +315,11 @@ export default function ExpensesPage() {
             className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none focus:border-emerald-500"
           >
             <option value="all">All payment methods</option>
-            <option value="Cash">Cash</option>
-            <option value="Card">Card</option>
-            <option value="Bank transfer">Bank transfer</option>
-            <option value="Mobile Money">Mobile Money</option>
-            <option value="Other">Other</option>
+            {paymentMethods.map((method) => (
+              <option key={method} value={method}>
+                {method}
+              </option>
+            ))}
           </select>
         </label>
 
@@ -148,7 +375,7 @@ export default function ExpensesPage() {
 
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[700px] text-left">
+          <table className="w-full min-w-[900px] text-left">
             <thead className="bg-slate-50">
               <tr className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                 <th className="px-5 py-4">Expense</th>
@@ -156,8 +383,10 @@ export default function ExpensesPage() {
                 <th className="px-5 py-4">Date</th>
                 <th className="px-5 py-4">Payment</th>
                 <th className="px-5 py-4 text-right">Amount</th>
+                <th className="px-5 py-4 text-center">Actions</th>
               </tr>
             </thead>
+
             <tbody className="divide-y divide-slate-100">
               {expenses.map((expense) => {
                 const category = categories.find(
@@ -170,23 +399,58 @@ export default function ExpensesPage() {
                       <p className="text-sm font-semibold text-slate-800">
                         {expense.title}
                       </p>
+
+                      {expense.description && (
+                        <p className="mt-1 text-xs text-slate-500">
+                          {expense.description}
+                        </p>
+                      )}
+
                       {expense.notes && (
                         <p className="mt-1 text-xs text-slate-500">
-                          {expense.notes}
+                          Notes: {expense.notes}
                         </p>
                       )}
                     </td>
+
                     <td className="px-5 py-4 text-sm text-slate-600">
                       {category?.name ?? 'Uncategorized'}
                     </td>
+
                     <td className="px-5 py-4 text-sm text-slate-600">
                       {formatDate(expense.date)}
                     </td>
+
                     <td className="px-5 py-4 text-sm text-slate-600">
                       {expense.paymentMethod}
                     </td>
+
                     <td className="px-5 py-4 text-right text-sm font-semibold text-slate-900">
                       {formatCurrency(expense.amount)}
+                    </td>
+
+                    <td className="px-5 py-4">
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setEditingExpense(expense)}
+                          aria-label={`Edit ${expense.title}`}
+                          title="Edit expense"
+                          className="rounded-lg p-2 text-blue-600 hover:bg-blue-50"
+                        >
+                          <Pencil size={17} />
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteExpense(expense)}
+                          aria-label={`Delete ${expense.title}`}
+                          title="Delete expense"
+                          className="rounded-lg p-2 text-red-600 hover:bg-red-50"
+                        >
+                          <Trash2 size={17} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 )
@@ -195,7 +459,7 @@ export default function ExpensesPage() {
               {filteredExpenses.length === 0 && (
                 <tr>
                   <td
-                    colSpan={5}
+                    colSpan={6}
                     className="px-5 py-12 text-center text-sm text-slate-500"
                   >
                     No expenses match your filters.
@@ -212,7 +476,7 @@ export default function ExpensesPage() {
             {pagination.totalItems} expenses
           </p>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <label className="mr-2 text-sm text-slate-500">
               Per page
               <select
@@ -256,6 +520,16 @@ export default function ExpensesPage() {
           </div>
         </div>
       </div>
+
+      {editingExpense && (
+        <ExpenseEditor
+          key={editingExpense.id}
+          expense={editingExpense}
+          categories={categories}
+          onSave={handleSaveExpense}
+          onCancel={() => setEditingExpense(null)}
+        />
+      )}
     </section>
   )
 }
