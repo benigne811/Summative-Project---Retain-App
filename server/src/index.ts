@@ -5,6 +5,7 @@ import dotenv from "dotenv";
 import db from "./db.js";
 import expensesRouter from "./expenses.js";
 import budgetsRouter from "./budgets.js";
+import categoriesRouter from "./categories.js";
 
 dotenv.config();
 
@@ -35,6 +36,7 @@ app.get("/api/health", (_req, res) => {
 
 app.use("/api/expenses", expensesRouter);
 app.use("/api/budgets", budgetsRouter);
+app.use("/api/categories", categoriesRouter);
 
 app.listen(PORT, () => {
   console.log(`Retain backend running at http://localhost:${PORT}`);
