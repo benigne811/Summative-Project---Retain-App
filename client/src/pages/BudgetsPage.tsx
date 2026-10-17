@@ -1,10 +1,13 @@
 
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { useAppDispatch, useAppSelector } from '../app/hooks'
 import {
   saveBudget,
   deleteBudget,
+  setBudgets,
 } from '../features/budget/budgetSlice'
+import type { MonthlyBudget } from '../types/budget'
+import { apiRequest } from '../services/api'
 
 function getCurrentMonth() {
   const now = new Date()
@@ -41,6 +44,47 @@ export default function BudgetsPage() {
 
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth())
   const [budgetInput, setBudgetInput] = useState('')
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [errorMessage, setErrorMessage] = useState('')
+  const [successMessage, setSuccessMessage] = useState('')
+
+  useEffect(() => {
+    let isActive = true
+
+    async function loadBudgets() {
+      setIsLoading(true)
+      setErrorMessage('')
+
+      try {
+        const loadedBudgets =
+          await apiRequest<MonthlyBudget[]>('/api/budgets')
+
+        if (isActive) {
+          dispatch(setBudgets(loadedBudgets))
+        }
+      } catch (error) {
+        if (isActive) {
+          setErrorMessage(
+            error instanceof Error
+              ? error.message
+              : 'Failed to load budgets.',
+          )
+        }
+      } finally {
+        if (isActive) {
+          setIsLoading(false)
+        }
+      }
+    }
+
+    void loadBudgets()
+
+    return () => {
+      isActive = false
+    }
+  }, [dispatch])
 
   const monthlyBudget = budgets.find(
     (budget) => budget.month === selectedMonth,
@@ -64,44 +108,94 @@ export default function BudgetsPage() {
 
   const progressPercentage = Math.min(spendingPercentage, 100)
 
-  function handleSaveBudget(event: FormEvent<HTMLFormElement>) {
+  async function handleSaveBudget(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
     const limit = Number(budgetInput)
 
     if (!selectedMonth || !Number.isFinite(limit) || limit <= 0) {
+      setErrorMessage('Enter a valid budget limit greater than zero.')
+      setSuccessMessage('')
       return
     }
 
-    const now = new Date().toISOString()
+    setIsSaving(true)
+    setErrorMessage('')
+    setSuccessMessage('')
 
-    dispatch(
-      saveBudget({
-        id: monthlyBudget?.id ?? crypto.randomUUID(),
-        month: selectedMonth,
-        limit,
-        createdAt: monthlyBudget?.createdAt ?? now,
-        updatedAt: now,
-      }),
-    )
+    try {
+      const savedBudget = monthlyBudget
+        ? await apiRequest<MonthlyBudget>(
+            `/api/budgets/${encodeURIComponent(monthlyBudget.id)}`,
+            {
+              method: 'PUT',
+              body: JSON.stringify({
+                month: selectedMonth,
+                limit,
+              }),
+            },
+          )
+        : await apiRequest<MonthlyBudget>('/api/budgets', {
+            method: 'POST',
+            body: JSON.stringify({
+              month: selectedMonth,
+              limit,
+            }),
+          })
 
-    setBudgetInput('')
+      dispatch(saveBudget(savedBudget))
+      setBudgetInput('')
+      setSuccessMessage(
+        `Budget for ${formatMonth(selectedMonth)} saved successfully.`,
+      )
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : 'Failed to save the budget.',
+      )
+    } finally {
+      setIsSaving(false)
+    }
   }
 
-  function handleDeleteBudget() {
-    if (!monthlyBudget) return
+  async function handleDeleteBudget() {
+    if (!monthlyBudget || isDeleting) return
 
     const confirmed = window.confirm(
       `Remove the budget for ${formatMonth(selectedMonth)}?`,
     )
 
-    if (confirmed) {
+    if (!confirmed) return
+
+    setIsDeleting(true)
+    setErrorMessage('')
+    setSuccessMessage('')
+
+    try {
+      await apiRequest<void>(
+        `/api/budgets/${encodeURIComponent(monthlyBudget.id)}`,
+        { method: 'DELETE' },
+      )
+
       dispatch(deleteBudget(selectedMonth))
       setBudgetInput('')
+      setSuccessMessage(
+        `Budget for ${formatMonth(selectedMonth)} removed successfully.`,
+      )
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : 'Failed to remove the budget.',
+      )
+    } finally {
+      setIsDeleting(false)
     }
   }
 
   const hasBudget = Boolean(monthlyBudget)
+  const isBusy = isLoading || isSaving || isDeleting
 
   return (
     <section className="space-y-6">
@@ -114,6 +208,30 @@ export default function BudgetsPage() {
         </p>
       </div>
 
+      {errorMessage && (
+        <div
+          role="alert"
+          className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+        >
+          {errorMessage}
+        </div>
+      )}
+
+      {successMessage && (
+        <div
+          role="status"
+          className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700"
+        >
+          {successMessage}
+        </div>
+      )}
+
+      {isLoading && (
+        <p role="status" className="text-sm text-slate-500">
+          Loading budgets from the server...
+        </p>
+      )}
+
       <div className="rounded-2xl border border-slate-200 bg-white p-5">
         <label className="block max-w-xs text-sm font-medium text-slate-700">
           Select month
@@ -123,6 +241,8 @@ export default function BudgetsPage() {
             onChange={(event) => {
               setSelectedMonth(event.target.value)
               setBudgetInput('')
+              setErrorMessage('')
+              setSuccessMessage('')
             }}
             className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2.5 outline-none focus:border-emerald-500"
           />
@@ -162,9 +282,7 @@ export default function BudgetsPage() {
           </p>
           <p
             className={`mt-3 text-2xl font-bold ${
-              remaining < 0
-                ? 'text-red-600'
-                : 'text-emerald-600'
+              remaining < 0 ? 'text-red-600' : 'text-emerald-600'
             }`}
           >
             {formatCurrency(Math.abs(remaining))}
@@ -226,10 +344,7 @@ export default function BudgetsPage() {
             aria-label="Monthly budget spending progress"
             aria-valuemin={0}
             aria-valuemax={100}
-            aria-valuenow={Math.min(
-              Math.round(spendingPercentage),
-              100,
-            )}
+            aria-valuenow={Math.min(Math.round(spendingPercentage), 100)}
           >
             <div
               className={`h-full rounded-full transition-all ${
@@ -266,28 +381,35 @@ export default function BudgetsPage() {
               min="1"
               step="1"
               value={budgetInput}
+              disabled={isBusy}
               onChange={(event) => setBudgetInput(event.target.value)}
-              placeholder={
-                hasBudget ? String(budgetLimit) : 'e.g. 200000'
-              }
-              className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2.5 outline-none focus:border-emerald-500"
+              placeholder={hasBudget ? String(budgetLimit) : 'e.g. 200000'}
+              className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2.5 outline-none focus:border-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-50"
             />
           </label>
 
           <button
             type="submit"
-            className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700"
+            disabled={isBusy}
+            className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {hasBudget ? 'Update budget' : 'Save budget'}
+            {isLoading
+              ? 'Loading...'
+              : isSaving
+                ? 'Saving...'
+                : hasBudget
+                  ? 'Update budget'
+                  : 'Save budget'}
           </button>
 
           {hasBudget && (
             <button
               type="button"
               onClick={handleDeleteBudget}
-              className="rounded-xl border border-red-200 px-5 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-50"
+              disabled={isBusy}
+              className="rounded-xl border border-red-200 px-5 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              Remove budget
+              {isDeleting ? 'Removing...' : 'Remove budget'}
             </button>
           )}
         </form>
@@ -319,7 +441,7 @@ export default function BudgetsPage() {
                       {expense.title}
                     </p>
                     <p className="mt-1 text-xs text-slate-500">
-                      {formatDate(expense.date)} Â· {expense.paymentMethod}
+                      {formatDate(expense.date)} · {expense.paymentMethod}
                     </p>
                   </div>
                   <p className="shrink-0 text-sm font-semibold text-slate-900">
@@ -335,7 +457,7 @@ export default function BudgetsPage() {
 }
 
 function formatDate(date: string) {
-  if (!date) return 'â€”'
+  if (!date) return '—'
 
   return new Date(`${date}T00:00:00`).toLocaleDateString('en-GB', {
     day: 'numeric',
