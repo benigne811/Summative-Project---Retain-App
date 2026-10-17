@@ -56,6 +56,32 @@ db.exec(`
   );
 `);
 
+// Initialize default categories without duplicating existing records.
+// Stable IDs preserve compatibility with existing expense categoryId values.
+const defaultCategories = [
+  { id: "food", name: "Food & Dining", color: "#10b981" },
+  { id: "transport", name: "Transport", color: "#3b82f6" },
+  { id: "housing", name: "Housing", color: "#f97316" },
+  { id: "shopping", name: "Shopping", color: "#8b5cf6" },
+  { id: "bills", name: "Bills & Utilities", color: "#eab308" },
+  { id: "health", name: "Health", color: "#ef4444" },
+  { id: "entertainment", name: "Entertainment", color: "#ec4899" },
+  { id: "other", name: "Other", color: "#64748b" },
+];
+
+const insertDefaultCategory = db.prepare(`
+  INSERT OR IGNORE INTO categories (id, name, color)
+  VALUES (@id, @name, @color)
+`);
+
+const seedCategories = db.transaction(() => {
+  for (const category of defaultCategories) {
+    insertDefaultCategory.run(category);
+  }
+});
+
+seedCategories();
+
 // Safely add fields missing from an existing expenses table.
 // Existing records are preserved.
 const expenseColumns = db
