@@ -8,7 +8,6 @@ const dataDirectory = join(process.cwd(), "data");
 mkdirSync(dataDirectory, { recursive: true });
 
 const databasePath = join(dataDirectory, "retain.db");
-
 const db = new Database(databasePath);
 
 db.pragma("journal_mode = WAL");
@@ -18,11 +17,23 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS expenses (
     id TEXT PRIMARY KEY,
     title TEXT NOT NULL,
+    description TEXT,
     amount REAL NOT NULL CHECK (amount >= 0),
-    date TEXT NOT NULL,
     categoryId TEXT NOT NULL,
-    paymentMethod TEXT NOT NULL,
-    createdAt TEXT NOT NULL DEFAULT (datetime('now'))
+    date TEXT NOT NULL,
+    paymentMethod TEXT NOT NULL
+      CHECK (
+        paymentMethod IN (
+          'Cash',
+          'Mobile Money',
+          'Bank transfer',
+          'Card',
+          'Other'
+        )
+      ),
+    notes TEXT,
+    createdAt TEXT NOT NULL DEFAULT (datetime('now')),
+    updatedAt TEXT
   );
 
   CREATE TABLE IF NOT EXISTS budgets (
@@ -37,6 +48,34 @@ db.exec(`
       AND substr(month, 6, 2) BETWEEN '01' AND '12'
     )
   );
+
+  CREATE TABLE IF NOT EXISTS categories (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE,
+    color TEXT
+  );
 `);
+
+// Safely add fields missing from an existing expenses table.
+// Existing records are preserved.
+const expenseColumns = db
+  .prepare("PRAGMA table_info(expenses)")
+  .all() as Array<{ name: string }>;
+
+const existingExpenseColumns = new Set(
+  expenseColumns.map((column) => column.name),
+);
+
+if (!existingExpenseColumns.has("description")) {
+  db.exec("ALTER TABLE expenses ADD COLUMN description TEXT");
+}
+
+if (!existingExpenseColumns.has("notes")) {
+  db.exec("ALTER TABLE expenses ADD COLUMN notes TEXT");
+}
+
+if (!existingExpenseColumns.has("updatedAt")) {
+  db.exec("ALTER TABLE expenses ADD COLUMN updatedAt TEXT");
+}
 
 export default db;
