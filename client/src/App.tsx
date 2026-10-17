@@ -1,5 +1,4 @@
-
-import { useState, type FormEvent } from 'react'
+﻿import { useEffect, useState, type FormEvent } from 'react'
 import {
   ArrowDownLeft,
   Bell,
@@ -21,7 +20,11 @@ import {
   CircleHelp,
 } from 'lucide-react'
 import { useAppDispatch, useAppSelector } from './app/hooks'
-import { addExpense, setSearch } from './features/expenses/expenseSlice'
+import {
+  addExpense,
+  setExpenses,
+  setSearch,
+} from './features/expenses/expenseSlice'
 import { apiRequest } from './services/api'
 import { useExpenses } from './features/expenses/useExpenses'
 import ExpensesPage from './pages/ExpensesPage'
@@ -76,7 +79,7 @@ function formatCurrency(amount: number) {
 }
 
 function formatDate(date: string) {
-  if (!date) return 'â€”'
+  if (!date) return '—'
 
   return new Date(`${date}T00:00:00`).toLocaleDateString('en-GB', {
     day: 'numeric',
@@ -230,6 +233,43 @@ function App() {
   const [activePage, setActivePage] = useState('Dashboard')
   const [showExpenseForm, setShowExpenseForm] = useState(false)
   const [expenseError, setExpenseError] = useState('')
+  const [expensesLoading, setExpensesLoading] = useState(true)
+  const [expensesLoadError, setExpensesLoadError] = useState('')
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadExpenses() {
+      setExpensesLoading(true)
+
+      try {
+        const expenses = await apiRequest<Expense[]>('/api/expenses')
+
+        if (!cancelled) {
+          dispatch(setExpenses(expenses))
+          setExpensesLoadError('')
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setExpensesLoadError(
+            error instanceof Error
+              ? error.message
+              : 'Could not load expenses. Please try again.',
+          )
+        }
+      } finally {
+        if (!cancelled) {
+          setExpensesLoading(false)
+        }
+      }
+    }
+
+    void loadExpenses()
+
+    return () => {
+      cancelled = true
+    }
+  }, [dispatch])
 
   const currentMonth = new Date().toISOString().slice(0, 7)
 
@@ -242,9 +282,7 @@ function App() {
     0,
   )
 
-  const currentBudget = budgets.find(
-    (item) => item.month === currentMonth,
-  )
+  const currentBudget = budgets.find((item) => item.month === currentMonth)
   const budget = currentBudget?.limit ?? 0
   const hasBudget = budget > 0
   const remaining = hasBudget ? budget - spent : 0
@@ -287,6 +325,24 @@ function App() {
           ? error.message
           : 'Could not save the expense. Please try again.',
       )
+    }
+  }
+
+  async function handleRetryLoadingExpenses() {
+    setExpensesLoading(true)
+    setExpensesLoadError('')
+
+    try {
+      const expenses = await apiRequest<Expense[]>('/api/expenses')
+      dispatch(setExpenses(expenses))
+    } catch (error) {
+      setExpensesLoadError(
+        error instanceof Error
+          ? error.message
+          : 'Could not load expenses. Please try again.',
+      )
+    } finally {
+      setExpensesLoading(false)
     }
   }
 
@@ -430,7 +486,7 @@ function App() {
               }}
               className="mt-3 text-xs font-semibold text-emerald-300 hover:text-white"
             >
-              Manage budget â†’
+              Manage budget →
             </button>
           </div>
 
@@ -512,6 +568,28 @@ function App() {
             </button>
           </div>
         </header>
+
+        {expensesLoading && (
+          <p className="px-4 pt-4 text-sm text-slate-500 sm:px-8">
+            Loading your expenses...
+          </p>
+        )}
+
+        {expensesLoadError && (
+          <div
+            role="alert"
+            className="mx-4 mt-4 rounded-xl bg-red-50 p-3 text-sm text-red-700 sm:mx-8"
+          >
+            <p>{expensesLoadError}</p>
+            <button
+              type="button"
+              onClick={() => void handleRetryLoadingExpenses()}
+              className="mt-2 font-semibold underline"
+            >
+              Try again
+            </button>
+          </div>
+        )}
 
         {activePage === 'Expenses' ? (
           <div className="mx-auto max-w-7xl p-4 sm:p-8">
@@ -607,7 +685,7 @@ function App() {
                     onClick={() => setActivePage('Budgets')}
                     className="mt-3 text-xs font-semibold text-emerald-700 hover:underline"
                   >
-                    Set a monthly budget â†’
+                    Set a monthly budget →
                   </button>
                 )}
               </div>
@@ -787,7 +865,7 @@ function App() {
                   onClick={() => setActivePage('Expenses')}
                   className="text-left text-sm font-semibold text-emerald-700 hover:text-emerald-800"
                 >
-                  View all expenses â†’
+                  View all expenses →
                 </button>
               </div>
 
@@ -878,7 +956,7 @@ function App() {
             </section>
 
             <footer className="pb-2 text-center text-xs text-slate-400">
-              Retain Â© 2026 Â· Make every shilling count.
+              Retain © 2026 · Make every shilling count.
             </footer>
           </div>
         ) : (
@@ -949,6 +1027,7 @@ function App() {
                 {expenseError}
               </p>
             )}
+
             <ExpenseForm
               categories={categories}
               onSubmit={handleAddExpense}
