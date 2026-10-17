@@ -3,6 +3,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import db from "./db.js";
+import expensesRouter from "./expenses.js";
 
 dotenv.config();
 
@@ -30,6 +31,8 @@ app.get("/api/health", (_req, res) => {
     });
   }
 });
+
+app.use("/api/expenses", expensesRouter);
 
 app.listen(PORT, () => {
   console.log(`Retain backend running at http://localhost:${PORT}`);
