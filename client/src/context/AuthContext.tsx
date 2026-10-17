@@ -1,33 +1,9 @@
-
-import {
-  createContext,
-  useContext,
-  useState,
-  type ReactNode,
-} from 'react'
-
-export type UserRole = 'user' | 'admin'
-
-export interface AuthUser {
-  id: string
-  name: string
-  email: string
-  role: UserRole
-}
+import { useState, type ReactNode } from 'react'
+import { AuthContext, type AuthUser } from './authContextTypes'
 
 interface Account extends AuthUser {
   password: string
 }
-
-interface AuthContextType {
-  user: AuthUser | null
-  isAuthenticated: boolean
-  signUp: (name: string, email: string, password: string) => void
-  signIn: (email: string, password: string) => void
-  signOut: () => void
-}
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [accounts, setAccounts] = useState<Account[]>([])
@@ -58,8 +34,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     setAccounts((previousAccounts) => [...previousAccounts, newAccount])
 
-    const { password: _password, ...newUser } = newAccount
-    setUser(newUser)
+    setUser({
+      id: newAccount.id,
+      name: newAccount.name,
+      email: newAccount.email,
+      role: newAccount.role,
+    })
   }
 
   function signIn(email: string, password: string) {
@@ -76,8 +56,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       )
     }
 
-    const { password: _password, ...authenticatedUser } = account
-    setUser(authenticatedUser)
+    setUser({
+      id: account.id,
+      name: account.name,
+      email: account.email,
+      role: account.role,
+    })
   }
 
   function signOut() {
@@ -97,14 +81,4 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       {children}
     </AuthContext.Provider>
   )
-}
-
-export function useAuth() {
-  const context = useContext(AuthContext)
-
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider.')
-  }
-
-  return context
 }

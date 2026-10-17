@@ -77,7 +77,7 @@ export default function BudgetsPage() {
 
     dispatch(
       saveBudget({
-        id: monthlyBudget?.id ?? `${selectedMonth}-${Date.now()}`,
+        id: monthlyBudget?.id ?? crypto.randomUUID(),
         month: selectedMonth,
         limit,
         createdAt: monthlyBudget?.createdAt ?? now,
@@ -319,7 +319,7 @@ export default function BudgetsPage() {
                       {expense.title}
                     </p>
                     <p className="mt-1 text-xs text-slate-500">
-                      {formatDate(expense.date)} · {expense.paymentMethod}
+                      {formatDate(expense.date)} Â· {expense.paymentMethod}
                     </p>
                   </div>
                   <p className="shrink-0 text-sm font-semibold text-slate-900">
@@ -335,7 +335,7 @@ export default function BudgetsPage() {
 }
 
 function formatDate(date: string) {
-  if (!date) return '—'
+  if (!date) return 'â€”'
 
   return new Date(`${date}T00:00:00`).toLocaleDateString('en-GB', {
     day: 'numeric',

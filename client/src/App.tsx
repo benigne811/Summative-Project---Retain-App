@@ -22,11 +22,12 @@ import {
 } from 'lucide-react'
 import { useAppDispatch, useAppSelector } from './app/hooks'
 import { addExpense, setSearch } from './features/expenses/expenseSlice'
+import { apiRequest } from './services/api'
 import { useExpenses } from './features/expenses/useExpenses'
 import ExpensesPage from './pages/ExpensesPage'
 import BudgetsPage from './pages/BudgetsPage'
 import ReportsPage from './pages/ReportsPage'
-import { useAuth } from './context/AuthContext'
+import { useAuth } from './context/useAuth'
 import type { Expense } from './types/expense'
 
 type Category = {
@@ -75,7 +76,7 @@ function formatCurrency(amount: number) {
 }
 
 function formatDate(date: string) {
-  if (!date) return '—'
+  if (!date) return 'â€”'
 
   return new Date(`${date}T00:00:00`).toLocaleDateString('en-GB', {
     day: 'numeric',
@@ -228,6 +229,7 @@ function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [activePage, setActivePage] = useState('Dashboard')
   const [showExpenseForm, setShowExpenseForm] = useState(false)
+  const [expenseError, setExpenseError] = useState('')
 
   const currentMonth = new Date().toISOString().slice(0, 7)
 
@@ -267,16 +269,25 @@ function App() {
     .sort((a, b) => b.amount - a.amount)
     .slice(0, 4)
 
-  function handleAddExpense(values: ExpenseFormValues) {
-    const newExpense: Expense = {
-      ...values,
-      id: `expense-${Date.now()}`,
-      createdAt: new Date().toISOString(),
-    }
+  async function handleAddExpense(values: ExpenseFormValues) {
+    setExpenseError('')
 
-    dispatch(addExpense(newExpense))
-    setShowExpenseForm(false)
-    setActivePage('Expenses')
+    try {
+      const savedExpense = await apiRequest<Expense>('/api/expenses', {
+        method: 'POST',
+        body: JSON.stringify(values),
+      })
+
+      dispatch(addExpense(savedExpense))
+      setShowExpenseForm(false)
+      setActivePage('Expenses')
+    } catch (error) {
+      setExpenseError(
+        error instanceof Error
+          ? error.message
+          : 'Could not save the expense. Please try again.',
+      )
+    }
   }
 
   const today = new Date().toLocaleDateString('en-US', {
@@ -419,7 +430,7 @@ function App() {
               }}
               className="mt-3 text-xs font-semibold text-emerald-300 hover:text-white"
             >
-              Manage budget →
+              Manage budget â†’
             </button>
           </div>
 
@@ -596,7 +607,7 @@ function App() {
                     onClick={() => setActivePage('Budgets')}
                     className="mt-3 text-xs font-semibold text-emerald-700 hover:underline"
                   >
-                    Set a monthly budget →
+                    Set a monthly budget â†’
                   </button>
                 )}
               </div>
@@ -776,7 +787,7 @@ function App() {
                   onClick={() => setActivePage('Expenses')}
                   className="text-left text-sm font-semibold text-emerald-700 hover:text-emerald-800"
                 >
-                  View all expenses →
+                  View all expenses â†’
                 </button>
               </div>
 
@@ -867,7 +878,7 @@ function App() {
             </section>
 
             <footer className="pb-2 text-center text-xs text-slate-400">
-              Retain © 2026 · Make every shilling count.
+              Retain Â© 2026 Â· Make every shilling count.
             </footer>
           </div>
         ) : (
@@ -930,6 +941,14 @@ function App() {
               </button>
             </div>
 
+            {expenseError && (
+              <p
+                role="alert"
+                className="mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-700"
+              >
+                {expenseError}
+              </p>
+            )}
             <ExpenseForm
               categories={categories}
               onSubmit={handleAddExpense}

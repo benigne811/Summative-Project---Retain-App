@@ -1,7 +1,7 @@
 
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { Wallet, Eye, EyeOff, ArrowRight } from 'lucide-react'
-import { useAuth } from '../context/AuthContext'
+import { useAuth } from '../context/useAuth'
 
 function AuthPage() {
   const { signIn, signUp } = useAuth()
@@ -158,7 +158,7 @@ function AuthPage() {
           </p>
 
           <p className="mt-10 text-center text-xs text-slate-400">
-            Retain © 2026 · Make every shilling count.
+            Retain Â© 2026 Â· Make every shilling count.
           </p>
         </div>
       </section>
@@ -183,7 +183,7 @@ function AuthPage() {
 
           <div className="mt-10 rounded-2xl border border-white/10 bg-white/5 p-6">
             <p className="text-sm leading-6 text-emerald-50">
-              “A clearer picture of your money starts with a single step.”
+              â€œA clearer picture of your money starts with a single step.â€
             </p>
             <p className="mt-4 text-xs font-semibold uppercase tracking-widest text-emerald-300">
               Your financial journey starts here
