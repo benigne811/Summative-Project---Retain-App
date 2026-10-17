@@ -25,6 +25,8 @@ import { addExpense, setSearch } from './features/expenses/expenseSlice'
 import { useExpenses } from './features/expenses/useExpenses'
 import ExpensesPage from './pages/ExpensesPage'
 import BudgetsPage from './pages/BudgetsPage'
+import ReportsPage from './pages/ReportsPage'
+import { useAuth } from './context/AuthContext'
 import type { Expense } from './types/expense'
 
 type Category = {
@@ -221,6 +223,7 @@ function App() {
   const searchQuery = useAppSelector((state) => state.expenses.filters.search)
   const budgets = useAppSelector((state) => state.budgets.items)
   const { filteredExpenses } = useExpenses()
+  const { user, signOut } = useAuth()
 
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [activePage, setActivePage] = useState('Dashboard')
@@ -282,6 +285,10 @@ function App() {
     day: 'numeric',
     year: 'numeric',
   })
+
+  const displayName = user?.name?.trim() || 'My account'
+  const firstName = displayName.split(/\s+/)[0]
+  const userInitial = displayName.charAt(0).toUpperCase() || 'U'
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800">
@@ -416,7 +423,11 @@ function App() {
             </button>
           </div>
 
-          <button className="mt-4 flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm text-slate-500 hover:bg-slate-50">
+          <button
+            type="button"
+            onClick={signOut}
+            className="mt-4 flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm text-slate-500 hover:bg-slate-50 hover:text-red-600"
+          >
             <LogOut size={18} />
             Sign out
           </button>
@@ -465,16 +476,22 @@ function App() {
               <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-emerald-500 ring-2 ring-white" />
             </button>
 
-            <button className="flex items-center gap-2 rounded-xl p-1.5 hover:bg-slate-50">
+            <button
+              type="button"
+              className="flex items-center gap-2 rounded-xl p-1.5 hover:bg-slate-50"
+              aria-label={`Signed in as ${displayName}`}
+            >
               <span className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 text-sm font-bold text-emerald-700">
-                B
+                {userInitial}
               </span>
 
               <span className="hidden text-left sm:block">
                 <span className="block text-sm font-semibold text-slate-800">
-                  My account
+                  {displayName}
                 </span>
-                <span className="block text-xs text-slate-500">Personal</span>
+                <span className="block text-xs text-slate-500">
+                  {user?.email ?? 'Personal account'}
+                </span>
               </span>
 
               <ChevronDown
@@ -493,6 +510,10 @@ function App() {
           <div className="mx-auto max-w-7xl p-4 sm:p-8">
             <BudgetsPage />
           </div>
+        ) : activePage === 'Reports' ? (
+          <div className="mx-auto max-w-7xl p-4 sm:p-8">
+            <ReportsPage />
+          </div>
         ) : activePage === 'Dashboard' ? (
           <div className="mx-auto max-w-7xl space-y-7 p-4 sm:p-8">
             <section className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
@@ -500,7 +521,7 @@ function App() {
                 <p className="text-sm font-medium text-emerald-700">{today}</p>
 
                 <h2 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-                  Welcome back!
+                  Welcome back, {firstName}!
                 </h2>
 
                 <p className="mt-2 text-sm text-slate-500">
@@ -640,7 +661,9 @@ function App() {
                       : 'No budget set'}
                   </span>
                   <span>
-                    {hasBudget ? `${formatCurrency(remaining)} left` : (
+                    {hasBudget ? (
+                      `${formatCurrency(remaining)} left`
+                    ) : (
                       <button
                         onClick={() => setActivePage('Budgets')}
                         className="font-semibold text-emerald-700 hover:underline"
