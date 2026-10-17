@@ -2,6 +2,7 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import db from "./db.js";
 
 dotenv.config();
 
@@ -12,10 +13,22 @@ app.use(cors());
 app.use(express.json());
 
 app.get("/api/health", (_req, res) => {
-  res.status(200).json({
-    status: "ok",
-    message: "Retain backend is running!",
-  });
+  try {
+    const result = db.prepare("SELECT 1 AS connected").get() as {
+      connected: number;
+    };
+
+    res.status(200).json({
+      status: "ok",
+      message: "Retain backend is running!",
+      database: result.connected === 1 ? "connected" : "disconnected",
+    });
+  } catch {
+    res.status(500).json({
+      status: "error",
+      message: "Database connection failed.",
+    });
+  }
 });
 
 app.listen(PORT, () => {
