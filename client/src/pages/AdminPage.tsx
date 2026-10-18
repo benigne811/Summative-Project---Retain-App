@@ -83,7 +83,32 @@ export default function AdminPage() {
     }
   }, [])
 
-  useEffect(() => { void loadInsights() }, [loadInsights])
+ useEffect(() => {
+  let active = true
+
+  async function fetchInitialInsights() {
+    try {
+      const data = await apiRequest<AdminInsights>('/api/admin/insights')
+      if (active) setInsights(data)
+    } catch (loadError) {
+      if (active) {
+        setError(
+          loadError instanceof Error
+            ? loadError.message
+            : 'Could not load admin insights.',
+        )
+      }
+    } finally {
+      if (active) setLoading(false)
+    }
+  }
+
+  void fetchInitialInsights()
+
+  return () => {
+    active = false
+  }
+}, [])
 
   function startEdit(category: ExpenseCategory) {
     setEditing(category)

@@ -1,3 +1,4 @@
+
 import { useEffect, useState, type ReactNode } from 'react'
 import { AuthContext, type AuthUser } from './authContextTypes'
 import { apiRequest } from '../services/api'
@@ -9,19 +10,35 @@ interface AuthResponse {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(
+    () => Boolean(localStorage.getItem('retain_session')),
+  )
 
   useEffect(() => {
     let active = true
+
     if (!localStorage.getItem('retain_session')) {
-      setIsLoading(false)
-      return () => { active = false }
+      return () => {
+        active = false
+      }
     }
+
     apiRequest<AuthUser>('/api/auth/me')
-      .then((currentUser) => { if (active) setUser(currentUser) })
-      .catch(() => { localStorage.removeItem('retain_session') })
-      .finally(() => { if (active) setIsLoading(false) })
-    return () => { active = false }
+      .then((currentUser) => {
+        if (active) setUser(currentUser)
+      })
+      .catch(() => {
+        if (active) {
+          localStorage.removeItem('retain_session')
+        }
+      })
+      .finally(() => {
+        if (active) setIsLoading(false)
+      })
+
+    return () => {
+      active = false
+    }
   }, [])
 
   async function authenticate(path: string, body: object) {
@@ -29,6 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       method: 'POST',
       body: JSON.stringify(body),
     })
+
     localStorage.setItem('retain_session', response.token)
     setUser(response.user)
   }
@@ -53,14 +71,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{
-      user,
-      isAuthenticated: user !== null,
-      isLoading,
-      signUp,
-      signIn,
-      signOut,
-    }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        isAuthenticated: user !== null,
+        isLoading,
+        signUp,
+        signIn,
+        signOut,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   )
