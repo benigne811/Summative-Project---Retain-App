@@ -11,6 +11,8 @@ export const selectFilteredExpenses = createSelector(
   [selectExpenses, selectFilters],
   (expenses, filters): Expense[] => {
     const searchTerm = filters.search.trim().toLowerCase()
+    const minAmount = filters.minAmount === '' ? null : Number(filters.minAmount)
+    const maxAmount = filters.maxAmount === '' ? null : Number(filters.maxAmount)
 
     const filtered = expenses.filter((expense) => {
       const matchesSearch =
@@ -27,19 +29,20 @@ export const selectFilteredExpenses = createSelector(
         filters.paymentMethod === 'all' ||
         expense.paymentMethod === filters.paymentMethod
 
+      const expenseDate = expense.date.slice(0, 10)
       const matchesStartDate =
-        !filters.startDate || expense.date >= filters.startDate
+        !filters.startDate || expenseDate >= filters.startDate
 
       const matchesEndDate =
-        !filters.endDate || expense.date <= filters.endDate
+        !filters.endDate || expenseDate <= filters.endDate
 
       const matchesMinAmount =
-        filters.minAmount === '' ||
-        expense.amount >= Number(filters.minAmount)
+        minAmount === null ||
+        (Number.isFinite(minAmount) && expense.amount >= minAmount)
 
       const matchesMaxAmount =
-        filters.maxAmount === '' ||
-        expense.amount <= Number(filters.maxAmount)
+        maxAmount === null ||
+        (Number.isFinite(maxAmount) && expense.amount <= maxAmount)
 
       return (
         matchesSearch &&
@@ -84,20 +87,18 @@ export const selectPaginationInfo = createSelector(
       1,
       Math.ceil(totalItems / filters.pageSize),
     )
+    const currentPage = Math.min(filters.currentPage, totalPages)
 
     return {
       totalItems,
       totalPages,
-      currentPage: Math.min(filters.currentPage, totalPages),
+      currentPage,
       pageSize: filters.pageSize,
       startItem:
         totalItems === 0
           ? 0
-          : (filters.currentPage - 1) * filters.pageSize + 1,
-      endItem: Math.min(
-        filters.currentPage * filters.pageSize,
-        totalItems,
-      ),
+          : (currentPage - 1) * filters.pageSize + 1,
+      endItem: Math.min(currentPage * filters.pageSize, totalItems),
     }
   },
 )

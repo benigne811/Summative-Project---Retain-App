@@ -1,5 +1,5 @@
 
-import { useMemo, useState, type FormEvent } from 'react'
+import { useState, type FormEvent } from 'react'
 import { Pencil, Search, Trash2, X } from 'lucide-react'
 import { useAppDispatch, useAppSelector } from '../app/hooks'
 import {
@@ -15,6 +15,7 @@ import {
   setPageSize,
 } from '../features/expenses/expenseSlice'
 import { apiRequest } from '../services/api'
+import { useExpenses } from '../features/expenses/useExpenses'
 import type { Expense, PaymentMethod } from '../types/expense'
 
 const categories = [
@@ -274,8 +275,8 @@ function ExpenseEditor({
 
 export default function ExpensesPage() {
   const dispatch = useAppDispatch()
-  const expenses = useAppSelector((state) => state.expenses.items)
   const filters = useAppSelector((state) => state.expenses.filters)
+  const { filteredExpenses, paginatedExpenses, pagination } = useExpenses()
 
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null)
   const [saving, setSaving] = useState(false)
@@ -284,76 +285,7 @@ export default function ExpensesPage() {
   const [pageError, setPageError] = useState('')
   const [busyDeleteId, setBusyDeleteId] = useState<string | null>(null)
 
-  const filteredExpenses = useMemo(() => {
-    const search = filters.search.trim().toLowerCase()
-    const minAmount =
-      filters.minAmount.trim() === '' ? null : Number(filters.minAmount)
-    const maxAmount =
-      filters.maxAmount.trim() === '' ? null : Number(filters.maxAmount)
-
-    return [...expenses]
-      .filter((expense) => {
-        const matchesSearch =
-          !search ||
-          expense.title.toLowerCase().includes(search) ||
-          (expense.description ?? '').toLowerCase().includes(search) ||
-          (expense.notes ?? '').toLowerCase().includes(search)
-
-        const matchesCategory =
-          filters.categoryId === 'all' ||
-          expense.categoryId === filters.categoryId
-
-        const matchesPayment =
-          filters.paymentMethod === 'all' ||
-          expense.paymentMethod === filters.paymentMethod
-
-        const expenseDate = expense.date.slice(0, 10)
-        const matchesStartDate =
-          !filters.startDate || expenseDate >= filters.startDate
-        const matchesEndDate =
-          !filters.endDate || expenseDate <= filters.endDate
-
-        const matchesMin =
-          minAmount === null ||
-          (Number.isFinite(minAmount) && expense.amount >= minAmount)
-
-        const matchesMax =
-          maxAmount === null ||
-          (Number.isFinite(maxAmount) && expense.amount <= maxAmount)
-
-        return (
-          matchesSearch &&
-          matchesCategory &&
-          matchesPayment &&
-          matchesStartDate &&
-          matchesEndDate &&
-          matchesMin &&
-          matchesMax
-        )
-      })
-      .sort((a, b) => {
-        const comparison =
-          filters.sortBy === 'amount'
-            ? a.amount - b.amount
-            : filters.sortBy === 'title'
-              ? a.title.localeCompare(b.title)
-              : a.date.localeCompare(b.date)
-
-        return filters.sortDirection === 'asc' ? comparison : -comparison
-      })
-  }, [expenses, filters])
-
-  const totalPages = Math.max(
-    1,
-    Math.ceil(filteredExpenses.length / filters.pageSize),
-  )
-
-  const currentPage = Math.min(filters.currentPage, totalPages)
-
-  const paginatedExpenses = filteredExpenses.slice(
-    (currentPage - 1) * filters.pageSize,
-    currentPage * filters.pageSize,
-  )
+  const { currentPage, totalPages, startItem, endItem } = pagination
 
   async function handleSaveExpense(values: ExpenseFormValues) {
     if (!editingExpense) return
@@ -738,10 +670,7 @@ export default function ExpensesPage() {
             <p className="text-xs text-slate-500">
               {filteredExpenses.length === 0
                 ? 'Showing 0 expenses'
-                : `Showing ${(currentPage - 1) * filters.pageSize + 1}–${Math.min(
-                    currentPage * filters.pageSize,
-                    filteredExpenses.length,
-                  )} of ${filteredExpenses.length}`}
+                : `Showing ${startItem}–${endItem} of ${filteredExpenses.length}`}
             </p>
 
             <select
