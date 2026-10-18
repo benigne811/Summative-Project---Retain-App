@@ -10,6 +10,9 @@ const db_js_1 = __importDefault(require("./db.js"));
 const expenses_js_1 = __importDefault(require("./expenses.js"));
 const budgets_js_1 = __importDefault(require("./budgets.js"));
 const categories_js_1 = __importDefault(require("./categories.js"));
+const authRoutes_js_1 = __importDefault(require("./authRoutes.js"));
+const auth_js_1 = require("./auth.js");
+const admin_js_1 = __importDefault(require("./admin.js"));
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 const PORT = Number(process.env.PORT) || 5000;
@@ -31,8 +34,10 @@ app.get("/api/health", (_req, res) => {
         });
     }
 });
-app.use("/api/expenses", expenses_js_1.default);
-app.use("/api/budgets", budgets_js_1.default);
+app.use("/api/auth", authRoutes_js_1.default);
+app.use("/api/admin", admin_js_1.default);
+app.use("/api/expenses", auth_js_1.requireAuth, expenses_js_1.default);
+app.use("/api/budgets", auth_js_1.requireAuth, budgets_js_1.default);
 app.use("/api/categories", categories_js_1.default);
 app.listen(PORT, () => {
     console.log(`Retain backend running at http://localhost:${PORT}`);

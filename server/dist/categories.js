@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const node_crypto_1 = require("node:crypto");
 const express_1 = require("express");
 const db_js_1 = __importDefault(require("./db.js"));
+const auth_js_1 = require("./auth.js");
 const router = (0, express_1.Router)();
 function validateCategory(body) {
     if (typeof body !== "object" || body === null) {
@@ -62,7 +63,7 @@ router.get("/:id", (req, res) => {
     }
 });
 // POST /api/categories — create a category
-router.post("/", (req, res) => {
+router.post("/", auth_js_1.requireAuth, auth_js_1.requireAdmin, (req, res) => {
     const validation = validateCategory(req.body);
     if (!validation.data) {
         res.status(400).json({ error: validation.error });
@@ -95,7 +96,7 @@ router.post("/", (req, res) => {
     }
 });
 // PUT /api/categories/:id — update a category
-router.put("/:id", (req, res) => {
+router.put("/:id", auth_js_1.requireAuth, auth_js_1.requireAdmin, (req, res) => {
     const validation = validateCategory(req.body);
     if (!validation.data) {
         res.status(400).json({ error: validation.error });
@@ -132,12 +133,24 @@ router.put("/:id", (req, res) => {
     }
 });
 // DELETE /api/categories/:id — delete a category
-router.delete("/:id", (req, res) => {
+router.delete("/:id", auth_js_1.requireAuth, auth_js_1.requireAdmin, (req, res) => {
     try {
-        const result = db_js_1.default
-            .prepare("DELETE FROM categories WHERE id = ?")
-            .run(req.params.id);
-        if (result.changes === 0) {
+        if (req.params.id === "other") {
+            res.status(400).json({ error: "The default Other category cannot be deleted." });
+            return;
+        }
+        const removeCategory = db_js_1.default.transaction(() => {
+            const existing = db_js_1.default.prepare("SELECT id FROM categories WHERE id = ?")
+                .get(req.params.id);
+            if (!existing)
+                return 0;
+            db_js_1.default.prepare("UPDATE expenses SET categoryId = 'other' WHERE categoryId = ?")
+                .run(req.params.id);
+            return db_js_1.default.prepare("DELETE FROM categories WHERE id = ?")
+                .run(req.params.id).changes;
+        });
+        const deletedCount = removeCategory();
+        if (deletedCount === 0) {
             res.status(404).json({ error: "Category not found." });
             return;
         }

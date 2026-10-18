@@ -3,7 +3,7 @@ import Database from "better-sqlite3";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 
-const dataDirectory = join(process.cwd(), "data");
+const dataDirectory = process.env.DATA_DIR || join(process.cwd(), "data");
 
 mkdirSync(dataDirectory, { recursive: true });
 

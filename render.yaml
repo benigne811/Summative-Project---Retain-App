@@ -1,0 +1,34 @@
+services:
+  - type: web
+    name: retain-api
+    runtime: node
+    plan: 0.5c-512mb
+    region: singapore
+    rootDir: server
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeployTrigger: off
+    disk:
+      name: retain-sqlite-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: DATA_DIR
+        value: /var/data
+      - key: ADMIN_EMAIL
+        sync: false
+
+  - type: web
+    name: retain-client
+    runtime: static
+    rootDir: client
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    autoDeployTrigger: off
+    envVars:
+      - key: VITE_API_BASE_URL
+        fromService:
+          name: retain-api
+          type: web
+          property: host

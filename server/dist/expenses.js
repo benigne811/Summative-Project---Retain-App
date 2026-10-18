@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const node_crypto_1 = require("node:crypto");
 const express_1 = require("express");
 const db_js_1 = __importDefault(require("./db.js"));
+const auth_js_1 = require("./auth.js");
 const router = (0, express_1.Router)();
 const paymentMethods = [
     "Cash",
@@ -59,11 +60,11 @@ function validateExpense(body) {
     };
 }
 // GET /api/expenses — list all expenses
-router.get("/", (_req, res) => {
+router.get("/", (req, res) => {
     try {
         const expenses = db_js_1.default
-            .prepare("SELECT * FROM expenses ORDER BY date DESC, createdAt DESC")
-            .all();
+            .prepare("SELECT * FROM expenses WHERE userId = ? ORDER BY date DESC, createdAt DESC")
+            .all((0, auth_js_1.authenticatedUserId)(req));
         res.json(expenses);
     }
     catch {
@@ -74,8 +75,8 @@ router.get("/", (_req, res) => {
 router.get("/:id", (req, res) => {
     try {
         const expense = db_js_1.default
-            .prepare("SELECT * FROM expenses WHERE id = ?")
-            .get(req.params.id);
+            .prepare("SELECT * FROM expenses WHERE id = ? AND userId = ?")
+            .get(req.params.id, (0, auth_js_1.authenticatedUserId)(req));
         if (!expense) {
             res.status(404).json({ error: "Expense not found." });
             return;
@@ -99,11 +100,11 @@ router.post("/", (req, res) => {
         db_js_1.default.prepare(`
       INSERT INTO expenses (
         id, title, description, amount, categoryId,
-        date, paymentMethod, notes
+        date, paymentMethod, notes, userId
       )
       VALUES (
         @id, @title, @description, @amount, @categoryId,
-        @date, @paymentMethod, @notes
+        @date, @paymentMethod, @notes, @userId
       )
     `).run({
             id,
@@ -114,6 +115,7 @@ router.post("/", (req, res) => {
             date: expense.date,
             paymentMethod: expense.paymentMethod,
             notes: expense.notes ?? null,
+            userId: (0, auth_js_1.authenticatedUserId)(req),
         });
         const savedExpense = db_js_1.default
             .prepare("SELECT * FROM expenses WHERE id = ?")
@@ -144,9 +146,10 @@ router.put("/:id", (req, res) => {
         paymentMethod = @paymentMethod,
         notes = @notes,
         updatedAt = datetime('now')
-      WHERE id = @id
+      WHERE id = @id AND userId = @userId
     `).run({
             id: req.params.id,
+            userId: (0, auth_js_1.authenticatedUserId)(req),
             title: expense.title,
             description: expense.description ?? null,
             amount: expense.amount,
@@ -160,8 +163,8 @@ router.put("/:id", (req, res) => {
             return;
         }
         const updatedExpense = db_js_1.default
-            .prepare("SELECT * FROM expenses WHERE id = ?")
-            .get(req.params.id);
+            .prepare("SELECT * FROM expenses WHERE id = ? AND userId = ?")
+            .get(req.params.id, (0, auth_js_1.authenticatedUserId)(req));
         res.json(updatedExpense);
     }
     catch {
@@ -172,8 +175,8 @@ router.put("/:id", (req, res) => {
 router.delete("/:id", (req, res) => {
     try {
         const result = db_js_1.default
-            .prepare("DELETE FROM expenses WHERE id = ?")
-            .run(req.params.id);
+            .prepare("DELETE FROM expenses WHERE id = ? AND userId = ?")
+            .run(req.params.id, (0, auth_js_1.authenticatedUserId)(req));
         if (result.changes === 0) {
             res.status(404).json({ error: "Expense not found." });
             return;

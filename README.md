@@ -93,4 +93,6 @@ Expense fields include `title`, `amount`, `categoryId`, `date`, and `paymentMeth
 
 ## Deployment
 
-The application still needs to be deployed. Before submission, deploy the frontend and API, configure `VITE_API_BASE_URL` and `ADMIN_EMAIL`, and add the public frontend URL under **Project links** above. The backend needs persistent storage for its SQLite database; use a host with a persistent disk mounted for the server’s `data` directory.
+The repository includes a Render Blueprint in `render.yaml` for the frontend and API. To deploy, connect the GitHub repository to Render and create a Blueprint instance from that file. Set the prompted `ADMIN_EMAIL` value, then register that address in the deployed app to create the administrator account.
+
+The API writes SQLite data to `/var/data/retain.db` on Render. The Blueprint attaches a persistent disk there, which is necessary because Render filesystems are otherwise ephemeral and persistent disks require a paid web service. Review Render’s [persistent disk documentation](https://render.com/docs/disks) before creating the service. After deployment, add the public frontend URL under **Project links** above.
