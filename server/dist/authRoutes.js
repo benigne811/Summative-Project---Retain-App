@@ -61,7 +61,10 @@ router.post("/signup", async (req, res) => {
                 db_js_1.default.prepare("UPDATE budgets SET userId = ? WHERE userId IS NULL").run(id);
             }
         })();
-        res.status(201).json({ user: publicUser(id), token: issueSession(id) });
+        res.status(201).json({
+            message: "Account created. Please sign in.",
+            user: publicUser(id),
+        });
     }
     catch (error) {
         if (error instanceof Error && error.message.includes("UNIQUE constraint failed")) {

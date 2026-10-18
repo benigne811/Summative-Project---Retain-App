@@ -12,16 +12,22 @@ function AuthPage() {
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError('')
+    setSuccess('')
     setIsSubmitting(true)
 
     try {
       if (mode === 'signup') {
         await signUp(name, email, password)
+        setMode('signin')
+        setName('')
+        setPassword('')
+        setSuccess('Account created successfully. Please sign in.')
       } else {
         await signIn(email, password)
       }
@@ -39,6 +45,7 @@ function AuthPage() {
   function changeMode(nextMode: 'signin' | 'signup') {
     setMode(nextMode)
     setError('')
+    setSuccess('')
   }
 
   return (
@@ -129,6 +136,15 @@ function AuthPage() {
                 className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700"
               >
                 {error}
+              </p>
+            )}
+
+            {success && (
+              <p
+                role="status"
+                className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800"
+              >
+                {success}
               </p>
             )}
 

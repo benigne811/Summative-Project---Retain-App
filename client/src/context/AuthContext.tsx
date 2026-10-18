@@ -8,6 +8,11 @@ interface AuthResponse {
   token: string
 }
 
+interface SignupResponse {
+  message: string
+  user: AuthUser
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [isLoading, setIsLoading] = useState(
@@ -52,7 +57,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function signUp(name: string, email: string, password: string) {
-    await authenticate('/api/auth/signup', { name, email, password })
+    await apiRequest<SignupResponse>('/api/auth/signup', {
+      method: 'POST',
+      body: JSON.stringify({ name, email, password }),
+    })
   }
 
   async function signIn(email: string, password: string) {
