@@ -218,6 +218,7 @@ function App() {
   const { user, signOut } = useAuth()
 
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false)
   const [activePage, setActivePage] = useState('Dashboard')
   const [showExpenseForm, setShowExpenseForm] = useState(false)
   const [expenseError, setExpenseError] = useState('')
@@ -344,6 +345,12 @@ function App() {
     } finally {
       setExpensesLoading(false)
     }
+  }
+
+  async function handleSignOut() {
+    setProfileMenuOpen(false)
+    setSidebarOpen(false)
+    await signOut()
   }
 
   const today = new Date().toLocaleDateString('en-US', {
@@ -492,8 +499,8 @@ function App() {
 
           <button
             type="button"
-            onClick={signOut}
-            className="mt-4 flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm text-slate-500 hover:bg-slate-50 hover:text-red-600"
+            onClick={() => void handleSignOut()}
+            className="mt-4 flex w-full items-center gap-3 rounded-xl border border-red-100 bg-red-50 px-3 py-3 text-sm font-semibold text-red-700 hover:bg-red-100"
           >
             <LogOut size={18} />
             Sign out
@@ -543,29 +550,63 @@ function App() {
               <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-emerald-500 ring-2 ring-white" />
             </button>
 
-            <button
-              type="button"
-              className="flex items-center gap-2 rounded-xl p-1.5 hover:bg-slate-50"
-              aria-label={`Signed in as ${displayName}`}
-            >
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 text-sm font-bold text-emerald-700">
-                {userInitial}
-              </span>
-
-              <span className="hidden text-left sm:block">
-                <span className="block text-sm font-semibold text-slate-800">
-                  {displayName}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setProfileMenuOpen((open) => !open)}
+                className="flex items-center gap-2 rounded-xl p-1.5 hover:bg-slate-50"
+                aria-label={`Open profile menu for ${displayName}`}
+                aria-haspopup="menu"
+                aria-expanded={profileMenuOpen}
+              >
+                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 text-sm font-bold text-emerald-700">
+                  {userInitial}
                 </span>
-                <span className="block text-xs text-slate-500">
-                  {user?.email ?? 'Personal account'}
-                </span>
-              </span>
 
-              <ChevronDown
-                size={15}
-                className="hidden text-slate-400 sm:block"
-              />
-            </button>
+                <span className="hidden text-left sm:block">
+                  <span className="block text-sm font-semibold text-slate-800">
+                    {displayName}
+                  </span>
+                  <span className="block text-xs text-slate-500">
+                    {user?.email ?? 'Personal account'}
+                  </span>
+                </span>
+
+                <ChevronDown
+                  size={15}
+                  className="hidden text-slate-400 sm:block"
+                />
+              </button>
+
+              {profileMenuOpen && (
+                <div
+                  role="menu"
+                  aria-label="Profile menu"
+                  className="absolute right-0 top-full z-50 mt-2 w-64 rounded-2xl border border-slate-200 bg-white p-3 shadow-lg"
+                >
+                  <div className="border-b border-slate-100 px-3 pb-3">
+                    <p className="text-sm font-semibold text-slate-900">
+                      {displayName}
+                    </p>
+                    <p className="mt-1 break-all text-xs text-slate-500">
+                      {user?.email}
+                    </p>
+                    <p className="mt-2 text-xs capitalize text-slate-500">
+                      {user?.role} account
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => void handleSignOut()}
+                    className="mt-2 flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-red-700 hover:bg-red-50"
+                  >
+                    <LogOut size={17} />
+                    Sign out
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </header>
 
