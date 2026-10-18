@@ -307,8 +307,9 @@ function ReportsPage() {
         </div>
 
         {monthlyExpenses.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px] text-left">
+          <>
+            <div className="hidden overflow-x-auto sm:block">
+              <table className="w-full min-w-[640px] text-left">
               <thead className="bg-slate-50">
                 <tr className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                   <th className="px-6 py-4">Expense</th>
@@ -345,8 +346,35 @@ function ReportsPage() {
                   )
                 })}
               </tbody>
-            </table>
-          </div>
+              </table>
+            </div>
+            <div className="divide-y divide-slate-100 sm:hidden">
+              {monthlyExpenses.map((expense) => {
+                const category = categories.find(
+                  (item) => item.id === expense.categoryId,
+                )
+
+                return (
+                  <article key={expense.id} className="flex items-start justify-between gap-3 p-4">
+                    <div className="min-w-0">
+                      <p className="break-words text-sm font-semibold text-slate-800">
+                        {expense.title}
+                      </p>
+                      <p className="mt-1 break-words text-xs text-slate-500">
+                        {category?.name ?? 'Uncategorized'} · {formatDate(expense.date)}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        {expense.paymentMethod}
+                      </p>
+                    </div>
+                    <p className="shrink-0 text-sm font-semibold text-slate-900">
+                      {formatCurrency(expense.amount)}
+                    </p>
+                  </article>
+                )
+              })}
+            </div>
+          </>
         ) : (
           <EmptyState message="There are no expenses for this reporting month." />
         )}

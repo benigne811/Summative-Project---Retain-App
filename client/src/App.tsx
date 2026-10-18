@@ -914,7 +914,7 @@ function App() {
                 </button>
               </div>
 
-              <div className="overflow-x-auto">
+              <div className="hidden overflow-x-auto sm:block">
                 <table className="w-full min-w-[680px] text-left">
                   <thead className="bg-slate-50">
                     <tr className="text-xs font-semibold uppercase tracking-wide text-slate-400">
@@ -983,6 +983,46 @@ function App() {
                     )}
                   </tbody>
                 </table>
+              </div>
+
+              <div className="divide-y divide-slate-100 sm:hidden">
+                {filteredExpenses.slice(0, 10).map((expense) => {
+                  const category = categories.find(
+                    (item) => item.id === expense.categoryId,
+                  )
+
+                  return (
+                    <article key={expense.id} className="flex items-start justify-between gap-3 p-4">
+                      <div className="flex min-w-0 items-start gap-3">
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                          <ShoppingBag size={17} />
+                        </span>
+                        <div className="min-w-0">
+                          <p className="break-words text-sm font-semibold text-slate-800">
+                            {expense.title}
+                          </p>
+                          <p className="mt-1 break-words text-xs text-slate-500">
+                            {category?.name ?? 'Uncategorized'} · {formatDate(expense.date)}
+                          </p>
+                          <p className="mt-1 text-xs text-slate-500">
+                            {expense.paymentMethod}
+                          </p>
+                        </div>
+                      </div>
+                      <p className="shrink-0 text-sm font-semibold text-slate-900">
+                        {formatCurrency(expense.amount)}
+                      </p>
+                    </article>
+                  )
+                })}
+
+                {filteredExpenses.length === 0 && (
+                  <p className="px-4 py-10 text-center text-sm text-slate-500">
+                    {searchQuery
+                      ? 'No expenses match your search.'
+                      : 'No expenses yet. Select Add expense to record your first transaction.'}
+                  </p>
+                )}
               </div>
 
               <div className="flex items-center justify-between border-t border-slate-100 px-6 py-4">

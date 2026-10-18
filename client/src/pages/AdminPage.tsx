@@ -273,12 +273,35 @@ export default function AdminPage() {
 
       <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
         <h3 className="font-bold text-slate-900">Recently registered users</h3>
-        <div className="mt-4 overflow-x-auto">
+        <div className="mt-4 hidden overflow-x-auto md:block">
           <table className="w-full min-w-[520px] text-left text-sm">
             <thead><tr className="border-b border-slate-100 text-xs uppercase tracking-wide text-slate-400"><th className="pb-3">Name</th><th className="pb-3">Email</th><th className="pb-3">Role</th><th className="pb-3 text-right">Registered</th></tr></thead>
             <tbody className="divide-y divide-slate-100">{insights.recentUsers.map((recentUser) => <tr key={recentUser.id}><td className="py-3 font-medium text-slate-800">{recentUser.name}</td><td className="py-3 text-slate-500">{recentUser.email}</td><td className="py-3 capitalize text-slate-500">{recentUser.role}</td><td className="py-3 text-right text-slate-500">{dateLabel(recentUser.createdAt)}</td></tr>)}</tbody>
           </table>
           {!loading && insights.recentUsers.length === 0 && <p className="py-6 text-center text-sm text-slate-500">No users have registered yet.</p>}
+        </div>
+        <div className="mt-4 divide-y divide-slate-100 md:hidden">
+          {insights.recentUsers.map((recentUser) => (
+            <article key={recentUser.id} className="py-3">
+              <div className="flex items-start justify-between gap-3">
+                <p className="min-w-0 break-words text-sm font-semibold text-slate-800">
+                  {recentUser.name}
+                </p>
+                <span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-xs capitalize text-slate-600">
+                  {recentUser.role}
+                </span>
+              </div>
+              <p className="mt-1 break-all text-xs text-slate-500">{recentUser.email}</p>
+              <p className="mt-1 text-xs text-slate-400">
+                Registered {dateLabel(recentUser.createdAt)}
+              </p>
+            </article>
+          ))}
+          {!loading && insights.recentUsers.length === 0 && (
+            <p className="py-6 text-center text-sm text-slate-500">
+              No users have registered yet.
+            </p>
+          )}
         </div>
       </section>
     </div>
