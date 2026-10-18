@@ -540,7 +540,7 @@ export default function ExpensesPage() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="hidden overflow-x-auto sm:block">
           <table className="w-full min-w-[850px] text-left">
             <thead className="bg-slate-50">
               <tr className="text-xs font-semibold uppercase tracking-wide text-slate-400">
@@ -654,6 +654,95 @@ export default function ExpensesPage() {
               )}
             </tbody>
           </table>
+        </div>
+
+        <div className="divide-y divide-slate-100 sm:hidden">
+          {paginatedExpenses.map((expense) => {
+            const category = categories.find(
+              (item) => item.id === expense.categoryId,
+            )
+
+            return (
+              <article key={expense.id} className="p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h4 className="break-words text-sm font-semibold text-slate-900">
+                      {expense.title}
+                    </h4>
+                    <p className="mt-1 text-xs text-slate-500">
+                      {category?.name ?? 'Uncategorized'} · {formatDate(expense.date)}
+                    </p>
+                  </div>
+                  <p className="shrink-0 text-sm font-bold text-slate-900">
+                    {formatCurrency(expense.amount)}
+                  </p>
+                </div>
+
+                <div className="mt-3 flex items-center justify-between gap-3">
+                  <span className="truncate text-xs text-slate-500">
+                    {expense.paymentMethod}
+                  </span>
+                  <div className="flex shrink-0 gap-2">
+                    <button
+                      type="button"
+                      aria-label={`Edit ${expense.title}`}
+                      onClick={() => {
+                        setEditError('')
+                        setEditingExpense(expense)
+                      }}
+                      disabled={busyDeleteId === expense.id}
+                      className="flex min-h-11 items-center gap-2 rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 disabled:opacity-50"
+                    >
+                      <Pencil size={15} /> Edit
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={`Delete ${expense.title}`}
+                      onClick={() => setDeletingId(expense.id)}
+                      disabled={
+                        busyDeleteId === expense.id || deletingId === expense.id
+                      }
+                      className="flex min-h-11 items-center gap-2 rounded-lg border border-red-100 px-3 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50"
+                    >
+                      <Trash2 size={15} /> Delete
+                    </button>
+                  </div>
+                </div>
+
+                {deletingId === expense.id && (
+                  <div className="mt-3 rounded-xl border border-red-100 bg-red-50 p-3">
+                    <p className="text-xs text-red-800">
+                      Delete this expense permanently?
+                    </p>
+                    <div className="mt-3 flex justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setDeletingId(null)}
+                        disabled={busyDeleteId === expense.id}
+                        className="min-h-10 rounded-lg px-3 text-xs text-slate-600 hover:bg-white"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void handleDeleteExpense(expense)}
+                        disabled={busyDeleteId === expense.id}
+                        className="min-h-10 rounded-lg bg-red-600 px-3 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+                      >
+                        {busyDeleteId === expense.id ? 'Deleting...' : 'Confirm delete'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </article>
+            )
+          })}
+
+          {paginatedExpenses.length === 0 && (
+            <p className="px-4 py-12 text-center text-sm text-slate-500">
+              No expenses match your filters.
+            </p>
+          )}
         </div>
 
         <div className="flex flex-col justify-between gap-3 border-t border-slate-100 px-5 py-4 sm:flex-row sm:items-center">
