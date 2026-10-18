@@ -8,6 +8,7 @@ import budgetsRouter from "./budgets.js";
 import categoriesRouter from "./categories.js";
 import authRouter from "./authRoutes.js";
 import { requireAuth } from "./auth.js";
+import adminRouter from "./admin.js";
 
 dotenv.config();
 
@@ -37,6 +38,7 @@ app.get("/api/health", (_req, res) => {
 });
 
 app.use("/api/auth", authRouter);
+app.use("/api/admin", adminRouter);
 app.use("/api/expenses", requireAuth, expensesRouter);
 app.use("/api/budgets", requireAuth, budgetsRouter);
 app.use("/api/categories", categoriesRouter);

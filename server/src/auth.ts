@@ -28,6 +28,16 @@ export function requireAuth(req: AuthenticatedRequest, res: Response, next: Next
   next();
 }
 
+export function requireAdmin(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  const role = db.prepare("SELECT role FROM users WHERE id = ?")
+    .get(req.userId) as { role: string } | undefined;
+  if (role?.role !== "admin") {
+    res.status(403).json({ error: "Administrator access is required." });
+    return;
+  }
+  next();
+}
+
 export function authenticatedUserId(req: AuthenticatedRequest): string {
   if (!req.userId) throw new Error("Authenticated route has no user ID.");
   return req.userId;

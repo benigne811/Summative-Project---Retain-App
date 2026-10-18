@@ -49,8 +49,11 @@ router.post("/signup", async (req: Request, res: Response) => {
     const id = randomUUID();
     const hash = await passwordHash(password);
     db.transaction(() => {
-      db.prepare("INSERT INTO users (id, name, email, passwordHash) VALUES (?, ?, ?, ?)")
-        .run(id, name.trim(), normalizedEmail, hash);
+      const role = process.env.ADMIN_EMAIL?.trim().toLowerCase() === normalizedEmail
+        ? "admin"
+        : "user";
+      db.prepare("INSERT INTO users (id, name, email, passwordHash, role) VALUES (?, ?, ?, ?, ?)")
+        .run(id, name.trim(), normalizedEmail, hash, role);
       // Preserve existing locally stored records by assigning them to the first account.
       const userCount = (db.prepare("SELECT COUNT(*) AS count FROM users").get() as { count: number }).count;
       if (userCount === 1) {

@@ -2,6 +2,7 @@
 import { randomUUID } from "node:crypto";
 import { Router, type Request, type Response } from "express";
 import db from "./db.js";
+import { requireAdmin, requireAuth } from "./auth.js";
 
 const router = Router();
 
@@ -86,7 +87,7 @@ router.get("/:id", (req: Request, res: Response) => {
 });
 
 // POST /api/categories — create a category
-router.post("/", (req: Request, res: Response) => {
+router.post("/", requireAuth, requireAdmin, (req: Request, res: Response) => {
   const validation = validateCategory(req.body);
 
   if (!validation.data) {
@@ -125,7 +126,7 @@ router.post("/", (req: Request, res: Response) => {
 });
 
 // PUT /api/categories/:id — update a category
-router.put("/:id", (req: Request, res: Response) => {
+router.put("/:id", requireAuth, requireAdmin, (req: Request, res: Response) => {
   const validation = validateCategory(req.body);
 
   if (!validation.data) {
@@ -169,13 +170,24 @@ router.put("/:id", (req: Request, res: Response) => {
 });
 
 // DELETE /api/categories/:id — delete a category
-router.delete("/:id", (req: Request, res: Response) => {
+router.delete("/:id", requireAuth, requireAdmin, (req: Request, res: Response) => {
   try {
-    const result = db
-      .prepare("DELETE FROM categories WHERE id = ?")
-      .run(req.params.id);
+    if (req.params.id === "other") {
+      res.status(400).json({ error: "The default Other category cannot be deleted." });
+      return;
+    }
+    const removeCategory = db.transaction(() => {
+      const existing = db.prepare("SELECT id FROM categories WHERE id = ?")
+        .get(req.params.id);
+      if (!existing) return 0;
+      db.prepare("UPDATE expenses SET categoryId = 'other' WHERE categoryId = ?")
+        .run(req.params.id);
+      return db.prepare("DELETE FROM categories WHERE id = ?")
+        .run(req.params.id).changes;
+    });
+    const deletedCount = removeCategory();
 
-    if (result.changes === 0) {
+    if (deletedCount === 0) {
       res.status(404).json({ error: "Category not found." });
       return;
     }
