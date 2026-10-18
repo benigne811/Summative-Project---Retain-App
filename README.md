@@ -5,7 +5,8 @@ Retain is a personal finance application for recording expenses, tracking monthl
 ## Project links
 
 - **Source repository:** [github.com/benigne811/Summative-Project---Retain-App](https://github.com/benigne811/Summative-Project---Retain-App)
-- **Live application:** Not deployed yet. Add the public frontend URL here before submission.
+- **Live application:** [Retain](https://summative-project-retain-app-1.onrender.com/)
+- **Backend health:** [API health check](https://summative-project-retain-app-zm4a.onrender.com/api/health)
 
 ## Main features
 
@@ -93,6 +94,11 @@ Expense fields include `title`, `amount`, `categoryId`, `date`, and `paymentMeth
 
 ## Deployment
 
-The repository includes a Render Blueprint in `render.yaml` for the frontend and API. To deploy, connect the GitHub repository to Render and create a Blueprint instance from that file. Set the prompted `ADMIN_EMAIL` value, then register that address in the deployed app to create the administrator account.
+The deployed application uses two Render services:
 
-The API writes SQLite data to `/var/data/retain.db` on Render. The Blueprint attaches a persistent disk there, which is necessary because Render filesystems are otherwise ephemeral and persistent disks require a paid web service. Review Render’s [persistent disk documentation](https://render.com/docs/disks) before creating the service. After deployment, add the public frontend URL under **Project links** above.
+- **Frontend:** [summative-project-retain-app-1.onrender.com](https://summative-project-retain-app-1.onrender.com/)
+- **Backend API:** [summative-project-retain-app-zm4a.onrender.com](https://summative-project-retain-app-zm4a.onrender.com)
+
+The repository's `render.yaml` describes a free Render Blueprint for the API and static frontend. For manual service setup, configure the API with root directory `server`, build command `npm ci && npm run build`, start command `npm start`, and health check path `/api/health`. Configure the frontend as a static site with root directory `client`, build command `npm ci && npm run build`, and publish directory `dist`. Set `VITE_API_BASE_URL` on the frontend service to the backend URL, and set `ADMIN_EMAIL` on the backend before registering that address if an administrator account is needed.
+
+The API uses SQLite at `server/data/retain.db` by default. The free Render web service has an ephemeral filesystem: its local SQLite data can be lost when the service restarts, redeploys, or spins down. Free web services can also sleep after a period without traffic. This deployment is suitable for a project demonstration, but it does not provide durable database storage. See Render's [free service limitations](https://render.com/docs/free).
