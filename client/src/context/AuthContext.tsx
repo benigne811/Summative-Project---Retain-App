@@ -1,83 +1,66 @@
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { AuthContext, type AuthUser } from './authContextTypes'
+import { apiRequest } from '../services/api'
 
-interface Account extends AuthUser {
-  password: string
+interface AuthResponse {
+  user: AuthUser
+  token: string
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [accounts, setAccounts] = useState<Account[]>([])
   const [user, setUser] = useState<AuthUser | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
 
-  function signUp(name: string, email: string, password: string) {
-    const normalizedEmail = email.trim().toLowerCase()
-
-    if (!name.trim() || !normalizedEmail || !password) {
-      throw new Error('Please complete all required fields.')
+  useEffect(() => {
+    let active = true
+    if (!localStorage.getItem('retain_session')) {
+      setIsLoading(false)
+      return () => { active = false }
     }
+    apiRequest<AuthUser>('/api/auth/me')
+      .then((currentUser) => { if (active) setUser(currentUser) })
+      .catch(() => { localStorage.removeItem('retain_session') })
+      .finally(() => { if (active) setIsLoading(false) })
+    return () => { active = false }
+  }, [])
 
-    if (password.length < 8) {
-      throw new Error('Your password must contain at least 8 characters.')
-    }
-
-    if (accounts.some((account) => account.email === normalizedEmail)) {
-      throw new Error('An account with this email already exists.')
-    }
-
-    const newAccount: Account = {
-      id: crypto.randomUUID(),
-      name: name.trim(),
-      email: normalizedEmail,
-      password,
-      role: 'user',
-    }
-
-    setAccounts((previousAccounts) => [...previousAccounts, newAccount])
-
-    setUser({
-      id: newAccount.id,
-      name: newAccount.name,
-      email: newAccount.email,
-      role: newAccount.role,
+  async function authenticate(path: string, body: object) {
+    const response = await apiRequest<AuthResponse>(path, {
+      method: 'POST',
+      body: JSON.stringify(body),
     })
+    localStorage.setItem('retain_session', response.token)
+    setUser(response.user)
   }
 
-  function signIn(email: string, password: string) {
-    const normalizedEmail = email.trim().toLowerCase()
-
-    const account = accounts.find(
-      (item) =>
-        item.email === normalizedEmail && item.password === password,
-    )
-
-    if (!account) {
-      throw new Error(
-        'Invalid email or password. Please check your details or create an account.',
-      )
-    }
-
-    setUser({
-      id: account.id,
-      name: account.name,
-      email: account.email,
-      role: account.role,
-    })
+  async function signUp(name: string, email: string, password: string) {
+    await authenticate('/api/auth/signup', { name, email, password })
   }
 
-  function signOut() {
-    setUser(null)
+  async function signIn(email: string, password: string) {
+    await authenticate('/api/auth/signin', { email, password })
+  }
+
+  async function signOut() {
+    try {
+      await apiRequest<void>('/api/auth/signout', { method: 'POST' })
+    } catch {
+      // Clear the local session even if the server is temporarily unavailable.
+    } finally {
+      localStorage.removeItem('retain_session')
+      setUser(null)
+    }
   }
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        isAuthenticated: user !== null,
-        signUp,
-        signIn,
-        signOut,
-      }}
-    >
+    <AuthContext.Provider value={{
+      user,
+      isAuthenticated: user !== null,
+      isLoading,
+      signUp,
+      signIn,
+      signOut,
+    }}>
       {children}
     </AuthContext.Provider>
   )

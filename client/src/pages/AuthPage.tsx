@@ -14,16 +14,16 @@ function AuthPage() {
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError('')
     setIsSubmitting(true)
 
     try {
       if (mode === 'signup') {
-        signUp(name, email, password)
+        await signUp(name, email, password)
       } else {
-        signIn(email, password)
+        await signIn(email, password)
       }
     } catch (err) {
       setError(
@@ -196,7 +196,11 @@ function AuthPage() {
 }
 
 export function AuthGate({ children }: { children: ReactNode }) {
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, isLoading } = useAuth()
+
+  if (isLoading) {
+    return <main className="flex min-h-screen items-center justify-center text-sm text-slate-500">Checking your session...</main>
+  }
 
   if (!isAuthenticated) {
     return <AuthPage />

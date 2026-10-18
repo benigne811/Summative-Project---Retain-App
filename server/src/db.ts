@@ -33,13 +33,15 @@ db.exec(`
       ),
     notes TEXT,
     createdAt TEXT NOT NULL DEFAULT (datetime('now')),
-    updatedAt TEXT
+    updatedAt TEXT,
+    userId TEXT
   );
 
   CREATE TABLE IF NOT EXISTS budgets (
     id TEXT PRIMARY KEY,
-    month TEXT NOT NULL UNIQUE,
+    month TEXT NOT NULL,
     "limit" REAL NOT NULL CHECK ("limit" >= 0),
+    userId TEXT,
     createdAt TEXT NOT NULL DEFAULT (datetime('now')),
     updatedAt TEXT NOT NULL DEFAULT (datetime('now')),
     CHECK (
@@ -54,7 +56,53 @@ db.exec(`
     name TEXT NOT NULL UNIQUE,
     color TEXT
   );
+
+  CREATE TABLE IF NOT EXISTS users (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    email TEXT NOT NULL UNIQUE,
+    passwordHash TEXT NOT NULL,
+    role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin')),
+    createdAt TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS sessions (
+    tokenHash TEXT PRIMARY KEY,
+    userId TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    expiresAt TEXT NOT NULL
+  );
 `);
+
+// Add user ownership columns to databases created before authentication.
+const addColumnIfMissing = (table: string, column: string) => {
+  const columns = db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
+  if (!columns.some((item) => item.name === column)) {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} TEXT`);
+  }
+};
+addColumnIfMissing("expenses", "userId");
+addColumnIfMissing("budgets", "userId");
+
+// Replace the legacy global month uniqueness rule with per-user uniqueness.
+const budgetIndexes = db.prepare("PRAGMA index_list(budgets)").all() as Array<{ name: string; unique: number; origin: string }>;
+if (budgetIndexes.some((index) => index.unique === 1 && index.origin === "u")) {
+  db.exec(`
+    CREATE TABLE budgets_migrated (
+      id TEXT PRIMARY KEY,
+      month TEXT NOT NULL,
+      "limit" REAL NOT NULL CHECK ("limit" >= 0),
+      createdAt TEXT NOT NULL DEFAULT (datetime('now')),
+      updatedAt TEXT NOT NULL DEFAULT (datetime('now')),
+      userId TEXT,
+      CHECK (length(month) = 7 AND month GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]' AND substr(month, 6, 2) BETWEEN '01' AND '12')
+    );
+    INSERT INTO budgets_migrated (id, month, "limit", createdAt, updatedAt, userId)
+      SELECT id, month, "limit", createdAt, updatedAt, userId FROM budgets;
+    DROP TABLE budgets;
+    ALTER TABLE budgets_migrated RENAME TO budgets;
+  `);
+}
+db.exec("CREATE UNIQUE INDEX IF NOT EXISTS budgets_user_month ON budgets(userId, month)");
 
 // Initialize default categories without duplicating existing records.
 // Stable IDs preserve compatibility with existing expense categoryId values.

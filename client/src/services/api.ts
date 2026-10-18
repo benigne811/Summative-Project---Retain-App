@@ -12,6 +12,10 @@ export async function apiRequest<T>(
   options: RequestInit = {},
 ): Promise<T> {
   const headers = new Headers(options.headers)
+  const token = localStorage.getItem('retain_session')
+  if (token && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${token}`)
+  }
 
   if (options.body && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json')

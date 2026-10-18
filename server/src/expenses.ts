@@ -2,6 +2,7 @@
 import { randomUUID } from "node:crypto";
 import { Router, type Request, type Response } from "express";
 import db from "./db.js";
+import { authenticatedUserId, type AuthenticatedRequest } from "./auth.js";
 
 const router = Router();
 
@@ -95,11 +96,11 @@ function validateExpense(body: unknown): {
 }
 
 // GET /api/expenses — list all expenses
-router.get("/", (_req: Request, res: Response) => {
+router.get("/", (req: AuthenticatedRequest, res: Response) => {
   try {
     const expenses = db
-      .prepare("SELECT * FROM expenses ORDER BY date DESC, createdAt DESC")
-      .all();
+      .prepare("SELECT * FROM expenses WHERE userId = ? ORDER BY date DESC, createdAt DESC")
+      .all(authenticatedUserId(req));
 
     res.json(expenses);
   } catch {
@@ -108,11 +109,11 @@ router.get("/", (_req: Request, res: Response) => {
 });
 
 // GET /api/expenses/:id — retrieve one expense
-router.get("/:id", (req: Request, res: Response) => {
+router.get("/:id", (req: AuthenticatedRequest, res: Response) => {
   try {
     const expense = db
-      .prepare("SELECT * FROM expenses WHERE id = ?")
-      .get(req.params.id) as Expense | undefined;
+      .prepare("SELECT * FROM expenses WHERE id = ? AND userId = ?")
+      .get(req.params.id, authenticatedUserId(req)) as Expense | undefined;
 
     if (!expense) {
       res.status(404).json({ error: "Expense not found." });
@@ -126,7 +127,7 @@ router.get("/:id", (req: Request, res: Response) => {
 });
 
 // POST /api/expenses — create an expense
-router.post("/", (req: Request, res: Response) => {
+router.post("/", (req: AuthenticatedRequest, res: Response) => {
   const validation = validateExpense(req.body);
 
   if (!validation.data) {
@@ -141,11 +142,11 @@ router.post("/", (req: Request, res: Response) => {
     db.prepare(`
       INSERT INTO expenses (
         id, title, description, amount, categoryId,
-        date, paymentMethod, notes
+        date, paymentMethod, notes, userId
       )
       VALUES (
         @id, @title, @description, @amount, @categoryId,
-        @date, @paymentMethod, @notes
+        @date, @paymentMethod, @notes, @userId
       )
     `).run({
       id,
@@ -156,6 +157,7 @@ router.post("/", (req: Request, res: Response) => {
       date: expense.date,
       paymentMethod: expense.paymentMethod,
       notes: expense.notes ?? null,
+      userId: authenticatedUserId(req),
     });
 
     const savedExpense = db
@@ -169,7 +171,7 @@ router.post("/", (req: Request, res: Response) => {
 });
 
 // PUT /api/expenses/:id — update an expense
-router.put("/:id", (req: Request, res: Response) => {
+router.put("/:id", (req: AuthenticatedRequest, res: Response) => {
   const validation = validateExpense(req.body);
 
   if (!validation.data) {
@@ -191,9 +193,10 @@ router.put("/:id", (req: Request, res: Response) => {
         paymentMethod = @paymentMethod,
         notes = @notes,
         updatedAt = datetime('now')
-      WHERE id = @id
+      WHERE id = @id AND userId = @userId
     `).run({
       id: req.params.id,
+      userId: authenticatedUserId(req),
       title: expense.title,
       description: expense.description ?? null,
       amount: expense.amount,
@@ -209,8 +212,8 @@ router.put("/:id", (req: Request, res: Response) => {
     }
 
     const updatedExpense = db
-      .prepare("SELECT * FROM expenses WHERE id = ?")
-      .get(req.params.id);
+      .prepare("SELECT * FROM expenses WHERE id = ? AND userId = ?")
+      .get(req.params.id, authenticatedUserId(req));
 
     res.json(updatedExpense);
   } catch {
@@ -219,11 +222,11 @@ router.put("/:id", (req: Request, res: Response) => {
 });
 
 // DELETE /api/expenses/:id — delete an expense
-router.delete("/:id", (req: Request, res: Response) => {
+router.delete("/:id", (req: AuthenticatedRequest, res: Response) => {
   try {
     const result = db
-      .prepare("DELETE FROM expenses WHERE id = ?")
-      .run(req.params.id);
+      .prepare("DELETE FROM expenses WHERE id = ? AND userId = ?")
+      .run(req.params.id, authenticatedUserId(req));
 
     if (result.changes === 0) {
       res.status(404).json({ error: "Expense not found." });

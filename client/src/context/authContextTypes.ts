@@ -12,9 +12,10 @@ export interface AuthUser {
 export interface AuthContextType {
   user: AuthUser | null
   isAuthenticated: boolean
-  signUp: (name: string, email: string, password: string) => void
-  signIn: (email: string, password: string) => void
-  signOut: () => void
+  signUp: (name: string, email: string, password: string) => Promise<void>
+  signIn: (email: string, password: string) => Promise<void>
+  signOut: () => Promise<void>
+  isLoading: boolean
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(

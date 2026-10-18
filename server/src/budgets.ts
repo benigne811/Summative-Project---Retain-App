@@ -2,6 +2,7 @@
 import { randomUUID } from "node:crypto";
 import { Router, type Request, type Response } from "express";
 import db from "./db.js";
+import { authenticatedUserId, type AuthenticatedRequest } from "./auth.js";
 
 const router = Router();
 
@@ -55,11 +56,11 @@ function validateBudget(body: unknown): {
 }
 
 // GET /api/budgets — list all budgets
-router.get("/", (_req: Request, res: Response) => {
+router.get("/", (req: AuthenticatedRequest, res: Response) => {
   try {
     const budgets = db
-      .prepare("SELECT * FROM budgets ORDER BY month DESC")
-      .all();
+      .prepare("SELECT * FROM budgets WHERE userId = ? ORDER BY month DESC")
+      .all(authenticatedUserId(req));
 
     res.json(budgets);
   } catch {
@@ -68,11 +69,11 @@ router.get("/", (_req: Request, res: Response) => {
 });
 
 // GET /api/budgets/:id — retrieve one budget
-router.get("/:id", (req: Request, res: Response) => {
+router.get("/:id", (req: AuthenticatedRequest, res: Response) => {
   try {
     const budget = db
-      .prepare("SELECT * FROM budgets WHERE id = ?")
-      .get(req.params.id);
+      .prepare("SELECT * FROM budgets WHERE id = ? AND userId = ?")
+      .get(req.params.id, authenticatedUserId(req));
 
     if (!budget) {
       res.status(404).json({ error: "Budget not found." });
@@ -86,7 +87,7 @@ router.get("/:id", (req: Request, res: Response) => {
 });
 
 // POST /api/budgets — create a monthly budget
-router.post("/", (req: Request, res: Response) => {
+router.post("/", (req: AuthenticatedRequest, res: Response) => {
   const validation = validateBudget(req.body);
 
   if (!validation.data) {
@@ -99,12 +100,13 @@ router.post("/", (req: Request, res: Response) => {
 
   try {
     db.prepare(`
-      INSERT INTO budgets (id, month, "limit")
-      VALUES (@id, @month, @limit)
+      INSERT INTO budgets (id, month, "limit", userId)
+      VALUES (@id, @month, @limit, @userId)
     `).run({
       id,
       month: budget.month,
       limit: budget.limit,
+      userId: authenticatedUserId(req),
     });
 
     const savedBudget = db
@@ -128,7 +130,7 @@ router.post("/", (req: Request, res: Response) => {
 });
 
 // PUT /api/budgets/:id — update an existing budget
-router.put("/:id", (req: Request, res: Response) => {
+router.put("/:id", (req: AuthenticatedRequest, res: Response) => {
   const validation = validateBudget(req.body);
 
   if (!validation.data) {
@@ -144,9 +146,10 @@ router.put("/:id", (req: Request, res: Response) => {
       SET month = @month,
           "limit" = @limit,
           updatedAt = datetime('now')
-      WHERE id = @id
+      WHERE id = @id AND userId = @userId
     `).run({
       id: req.params.id,
+      userId: authenticatedUserId(req),
       month: budget.month,
       limit: budget.limit,
     });
@@ -157,8 +160,8 @@ router.put("/:id", (req: Request, res: Response) => {
     }
 
     const updatedBudget = db
-      .prepare("SELECT * FROM budgets WHERE id = ?")
-      .get(req.params.id);
+      .prepare("SELECT * FROM budgets WHERE id = ? AND userId = ?")
+      .get(req.params.id, authenticatedUserId(req));
 
     res.json(updatedBudget);
   } catch (error) {
@@ -177,11 +180,11 @@ router.put("/:id", (req: Request, res: Response) => {
 });
 
 // DELETE /api/budgets/:id — delete a budget
-router.delete("/:id", (req: Request, res: Response) => {
+router.delete("/:id", (req: AuthenticatedRequest, res: Response) => {
   try {
     const result = db
-      .prepare("DELETE FROM budgets WHERE id = ?")
-      .run(req.params.id);
+      .prepare("DELETE FROM budgets WHERE id = ? AND userId = ?")
+      .run(req.params.id, authenticatedUserId(req));
 
     if (result.changes === 0) {
       res.status(404).json({ error: "Budget not found." });
