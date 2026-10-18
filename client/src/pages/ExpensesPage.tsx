@@ -18,17 +18,6 @@ import { apiRequest } from '../services/api'
 import { useExpenses } from '../features/expenses/useExpenses'
 import type { Expense, PaymentMethod } from '../types/expense'
 
-const categories = [
-  { id: 'food', name: 'Food & Dining', color: '#10b981' },
-  { id: 'transport', name: 'Transport', color: '#3b82f6' },
-  { id: 'housing', name: 'Housing', color: '#f97316' },
-  { id: 'shopping', name: 'Shopping', color: '#8b5cf6' },
-  { id: 'bills', name: 'Bills & Utilities', color: '#eab308' },
-  { id: 'health', name: 'Health', color: '#ef4444' },
-  { id: 'entertainment', name: 'Entertainment', color: '#ec4899' },
-  { id: 'other', name: 'Other', color: '#64748b' },
-]
-
 const paymentMethods: PaymentMethod[] = [
   'Cash',
   'Mobile Money',
@@ -81,6 +70,7 @@ function ExpenseEditor({
   onSave: (values: ExpenseFormValues) => Promise<void>
   onCancel: () => void
 }) {
+  const categories = useAppSelector((state) => state.categories)
   const [title, setTitle] = useState(expense.title)
   const [amount, setAmount] = useState(String(expense.amount))
   const [date, setDate] = useState(expense.date.slice(0, 10))
@@ -275,6 +265,7 @@ function ExpenseEditor({
 
 export default function ExpensesPage() {
   const dispatch = useAppDispatch()
+  const categories = useAppSelector((state) => state.categories)
   const filters = useAppSelector((state) => state.expenses.filters)
   const { filteredExpenses, paginatedExpenses, pagination } = useExpenses()
 

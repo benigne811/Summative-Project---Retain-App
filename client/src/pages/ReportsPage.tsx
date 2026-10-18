@@ -4,17 +4,6 @@ import { CalendarDays, ChartNoAxesCombined, Receipt, Wallet } from 'lucide-react
 import { useAppSelector } from '../app/hooks'
 import type { Expense } from '../types/expense'
 
-const categories = [
-  { id: 'food', name: 'Food & Dining', color: '#10b981' },
-  { id: 'transport', name: 'Transport', color: '#3b82f6' },
-  { id: 'housing', name: 'Housing', color: '#f97316' },
-  { id: 'shopping', name: 'Shopping', color: '#8b5cf6' },
-  { id: 'bills', name: 'Bills & Utilities', color: '#eab308' },
-  { id: 'health', name: 'Health', color: '#ef4444' },
-  { id: 'entertainment', name: 'Entertainment', color: '#ec4899' },
-  { id: 'other', name: 'Other', color: '#64748b' },
-]
-
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat('en-RW', {
     style: 'currency',
@@ -35,6 +24,7 @@ function formatDate(date: string) {
 
 function ReportsPage() {
   const expenses = useAppSelector((state) => state.expenses.items)
+  const categories = useAppSelector((state) => state.categories)
   const budgets = useAppSelector((state) => state.budgets.items)
 
   const currentMonth = new Date().toISOString().slice(0, 7)

@@ -18,6 +18,7 @@ import {
   X,
   ChartNoAxesCombined,
   CircleHelp,
+  ShieldCheck,
 } from 'lucide-react'
 import { useAppDispatch, useAppSelector } from './app/hooks'
 import {
@@ -32,23 +33,9 @@ import BudgetsPage from './pages/BudgetsPage'
 import ReportsPage from './pages/ReportsPage'
 import { useAuth } from './context/useAuth'
 import type { Expense } from './types/expense'
-
-type Category = {
-  id: string
-  name: string
-  color?: string
-}
-
-const categories: Category[] = [
-  { id: 'food', name: 'Food & Dining', color: '#10b981' },
-  { id: 'transport', name: 'Transport', color: '#3b82f6' },
-  { id: 'housing', name: 'Housing', color: '#f97316' },
-  { id: 'shopping', name: 'Shopping', color: '#8b5cf6' },
-  { id: 'bills', name: 'Bills & Utilities', color: '#eab308' },
-  { id: 'health', name: 'Health', color: '#ef4444' },
-  { id: 'entertainment', name: 'Entertainment', color: '#ec4899' },
-  { id: 'other', name: 'Other', color: '#64748b' },
-]
+import type { ExpenseCategory } from './types/expense'
+import { setCategories } from './features/expenses/categorySlice'
+import AdminPage from './pages/AdminPage'
 
 type ExpenseFormValues = {
   title: string
@@ -93,7 +80,7 @@ function ExpenseForm({
   onSubmit,
   onCancel,
 }: {
-  categories: Category[]
+  categories: ExpenseCategory[]
   onSubmit: (values: ExpenseFormValues) => void
   onCancel: () => void
 }) {
@@ -224,6 +211,7 @@ function ExpenseForm({
 function App() {
   const dispatch = useAppDispatch()
   const allExpenses = useAppSelector((state) => state.expenses.items)
+  const categories = useAppSelector((state) => state.categories)
   const searchQuery = useAppSelector((state) => state.expenses.filters.search)
   const budgets = useAppSelector((state) => state.budgets.items)
   const { filteredExpenses } = useExpenses()
@@ -235,6 +223,18 @@ function App() {
   const [expenseError, setExpenseError] = useState('')
   const [expensesLoading, setExpensesLoading] = useState(true)
   const [expensesLoadError, setExpensesLoadError] = useState('')
+
+  useEffect(() => {
+    let cancelled = false
+    apiRequest<ExpenseCategory[]>('/api/categories')
+      .then((loadedCategories) => {
+        if (!cancelled) dispatch(setCategories(loadedCategories))
+      })
+      .catch(() => {
+        // Keep the app usable if category loading fails; the page shows no categories.
+      })
+    return () => { cancelled = true }
+  }, [dispatch])
 
   useEffect(() => {
     let cancelled = false
@@ -401,7 +401,7 @@ function App() {
           </p>
 
           <nav className="space-y-1">
-            {navigation.map(({ label, icon: Icon }) => (
+            {[...navigation, ...(user?.role === 'admin' ? [{ label: 'Admin', icon: ShieldCheck }] : [])].map(({ label, icon: Icon }) => (
               <button
                 key={label}
                 onClick={() => {
@@ -602,6 +602,10 @@ function App() {
         ) : activePage === 'Reports' ? (
           <div className="mx-auto max-w-7xl p-4 sm:p-8">
             <ReportsPage />
+          </div>
+        ) : activePage === 'Admin' && user?.role === 'admin' ? (
+          <div className="mx-auto max-w-7xl p-4 sm:p-8">
+            <AdminPage />
           </div>
         ) : activePage === 'Dashboard' ? (
           <div className="mx-auto max-w-7xl space-y-7 p-4 sm:p-8">
