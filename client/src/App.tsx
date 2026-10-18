@@ -375,7 +375,7 @@ function App() {
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-slate-200 bg-white transition-transform duration-200 lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col overflow-y-auto border-r border-slate-200 bg-white transition-transform duration-200 lg:translate-x-0 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -508,9 +508,9 @@ function App() {
         </div>
       </aside>
 
-      <main className="min-h-screen lg:pl-64">
-        <header className="sticky top-0 z-20 flex h-20 items-center justify-between border-b border-slate-200 bg-white/90 px-4 backdrop-blur sm:px-8">
-          <div className="flex items-center gap-3">
+      <main className="min-h-screen min-w-0 lg:pl-64">
+        <header className="sticky top-0 z-20 flex h-20 items-center justify-between gap-2 border-b border-slate-200 bg-white/90 px-3 backdrop-blur sm:px-8">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
             <button
               aria-label="Open navigation"
               className="rounded-xl p-2 hover:bg-slate-100 lg:hidden"
@@ -520,7 +520,7 @@ function App() {
             </button>
 
             <div>
-              <h1 className="text-lg font-bold text-slate-900 sm:text-xl">
+              <h1 className="truncate text-lg font-bold text-slate-900 sm:text-xl">
                 {activePage}
               </h1>
 
@@ -530,7 +530,7 @@ function App() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-4">
+          <div className="flex shrink-0 items-center gap-1 sm:gap-4">
             <label className="hidden items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 md:flex">
               <Search size={17} className="text-slate-400" />
 

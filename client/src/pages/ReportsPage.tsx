@@ -114,13 +114,13 @@ function ReportsPage() {
           </p>
         </div>
 
-        <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm">
+        <label className="flex w-full flex-col items-start gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm sm:w-auto sm:flex-row sm:items-center sm:gap-3">
           <CalendarDays size={18} className="text-emerald-600" />
           <span className="font-medium text-slate-600">Reporting month</span>
           <select
             value={selectedMonth}
             onChange={(event) => setSelectedMonth(event.target.value)}
-            className="max-w-40 bg-transparent font-semibold text-slate-900 outline-none"
+            className="w-full max-w-full bg-transparent font-semibold text-slate-900 outline-none sm:w-auto sm:max-w-40"
           >
             {availableMonths.map((month) => (
               <option key={month} value={month}>
