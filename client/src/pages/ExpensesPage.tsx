@@ -379,7 +379,7 @@ export default function ExpensesPage() {
             <input
               value={filters.search}
               onChange={(event) => dispatch(setSearch(event.target.value))}
-              placeholder="Search expenses..."
+              placeholder="Title, category, date, amount..."
               className="w-full rounded-xl border border-slate-200 py-2.5 pl-9 pr-3 text-sm outline-none focus:border-emerald-500"
             />
           </label>

@@ -8,7 +8,6 @@ import {
   LogOut,
   Menu,
   Plus,
-  Search,
   ShoppingBag,
   Target,
   TrendingUp,
@@ -21,10 +20,8 @@ import { useAppDispatch, useAppSelector } from './app/hooks'
 import {
   addExpense,
   setExpenses,
-  setSearch,
 } from './features/expenses/expenseSlice'
 import { apiRequest } from './services/api'
-import { useExpenses } from './features/expenses/useExpenses'
 import ExpensesPage from './pages/ExpensesPage'
 import BudgetsPage from './pages/BudgetsPage'
 import ReportsPage from './pages/ReportsPage'
@@ -204,9 +201,7 @@ function App() {
   const dispatch = useAppDispatch()
   const allExpenses = useAppSelector((state) => state.expenses.items)
   const categories = useAppSelector((state) => state.categories)
-  const searchQuery = useAppSelector((state) => state.expenses.filters.search)
   const budgets = useAppSelector((state) => state.budgets.items)
-  const { filteredExpenses } = useExpenses()
   const { user, signOut } = useAuth()
 
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -490,17 +485,6 @@ function App() {
           </div>
 
           <div className="flex shrink-0 items-center gap-1 sm:gap-4">
-            <label className="hidden items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 md:flex">
-              <Search size={17} className="text-slate-400" />
-
-              <input
-                value={searchQuery}
-                onChange={(event) => dispatch(setSearch(event.target.value))}
-                placeholder="Search expenses..."
-                className="w-36 bg-transparent text-sm outline-none placeholder:text-slate-400 lg:w-48"
-              />
-            </label>
-
             <div className="relative">
               <button
                 type="button"
@@ -869,7 +853,7 @@ function App() {
                   </thead>
 
                   <tbody className="divide-y divide-slate-100">
-                    {filteredExpenses.slice(0, 10).map((expense) => {
+                    {allExpenses.slice(0, 10).map((expense) => {
                       const category = categories.find(
                         (item) => item.id === expense.categoryId,
                       )
@@ -912,15 +896,13 @@ function App() {
                       )
                     })}
 
-                    {filteredExpenses.length === 0 && (
+                    {allExpenses.length === 0 && (
                       <tr>
                         <td
                           colSpan={4}
                           className="px-6 py-10 text-center text-sm text-slate-500"
                         >
-                          {searchQuery
-                            ? 'No expenses match your search.'
-                            : 'No expenses yet. Select Add expense to record your first transaction.'}
+                          No expenses yet. Select Add expense to record your first transaction.
                         </td>
                       </tr>
                     )}
@@ -929,7 +911,7 @@ function App() {
               </div>
 
               <div className="divide-y divide-slate-100 sm:hidden">
-                {filteredExpenses.slice(0, 10).map((expense) => {
+                {allExpenses.slice(0, 10).map((expense) => {
                   const category = categories.find(
                     (item) => item.id === expense.categoryId,
                   )
@@ -959,27 +941,18 @@ function App() {
                   )
                 })}
 
-                {filteredExpenses.length === 0 && (
+                {allExpenses.length === 0 && (
                   <p className="px-4 py-10 text-center text-sm text-slate-500">
-                    {searchQuery
-                      ? 'No expenses match your search.'
-                      : 'No expenses yet. Select Add expense to record your first transaction.'}
+                    No expenses yet. Select Add expense to record your first transaction.
                   </p>
                 )}
               </div>
 
               <div className="flex items-center justify-between border-t border-slate-100 px-6 py-4">
                 <p className="text-xs text-slate-500">
-                  Showing {Math.min(filteredExpenses.length, 10)} of{' '}
-                  {filteredExpenses.length} matching expenses
+                  Showing {Math.min(allExpenses.length, 10)} of{' '}
+                  {allExpenses.length} expenses
                 </p>
-
-                <button
-                  onClick={() => dispatch(setSearch(''))}
-                  className="text-xs font-semibold text-emerald-700 hover:underline"
-                >
-                  Clear search
-                </button>
               </div>
             </section>
           </div>

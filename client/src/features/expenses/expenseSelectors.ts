@@ -7,19 +7,61 @@ const selectExpenses = (state: RootState) => state.expenses.items
 
 const selectFilters = (state: RootState) => state.expenses.filters
 
+const selectCategories = (state: RootState) => state.categories
+
 export const selectFilteredExpenses = createSelector(
-  [selectExpenses, selectFilters],
-  (expenses, filters): Expense[] => {
-    const searchTerm = filters.search.trim().toLowerCase()
+  [selectExpenses, selectFilters, selectCategories],
+  (expenses, filters, categories): Expense[] => {
+    const searchTerms = filters.search
+      .trim()
+      .toLocaleLowerCase()
+      .split(/\s+/)
+      .filter(Boolean)
     const minAmount = filters.minAmount === '' ? null : Number(filters.minAmount)
     const maxAmount = filters.maxAmount === '' ? null : Number(filters.maxAmount)
 
     const filtered = expenses.filter((expense) => {
-      const matchesSearch =
-        !searchTerm ||
-        expense.title.toLowerCase().includes(searchTerm) ||
-        (expense.description ?? '').toLowerCase().includes(searchTerm) ||
-        (expense.notes ?? '').toLowerCase().includes(searchTerm)
+      const categoryName =
+        categories.find((category) => category.id === expense.categoryId)
+          ?.name ?? ''
+      const expenseDate = expense.date.slice(0, 10)
+      const date = new Date(`${expenseDate}T00:00:00`)
+      const dateLabels = Number.isNaN(date.getTime())
+        ? [expenseDate]
+        : [
+            expenseDate,
+            date.toLocaleDateString('en-GB', {
+              day: 'numeric',
+              month: 'long',
+              year: 'numeric',
+            }),
+            date.toLocaleDateString('en-GB', {
+              month: 'long',
+              year: 'numeric',
+            }),
+            date.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }),
+          ]
+      const searchableText = [
+        expense.title,
+        expense.description,
+        expense.notes,
+        categoryName,
+        expense.paymentMethod,
+        ...dateLabels,
+        String(expense.amount),
+        expense.amount.toLocaleString('en-RW'),
+        new Intl.NumberFormat('en-RW', {
+          style: 'currency',
+          currency: 'RWF',
+          maximumFractionDigits: 0,
+        }).format(expense.amount),
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLocaleLowerCase()
+      const matchesSearch = searchTerms.every((term) =>
+        searchableText.includes(term),
+      )
 
       const matchesCategory =
         filters.categoryId === 'all' ||
@@ -29,7 +71,6 @@ export const selectFilteredExpenses = createSelector(
         filters.paymentMethod === 'all' ||
         expense.paymentMethod === filters.paymentMethod
 
-      const expenseDate = expense.date.slice(0, 10)
       const matchesStartDate =
         !filters.startDate || expenseDate >= filters.startDate
 
