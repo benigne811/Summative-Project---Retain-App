@@ -1,7 +1,8 @@
 
-import { useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { ReceiptText, Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '../context/useAuth'
+import { apiRequest } from '../services/api'
 
 function AuthPage() {
   const { signIn, signUp } = useAuth()
@@ -14,12 +15,24 @@ function AuthPage() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isWaitingForServer, setIsWaitingForServer] = useState(false)
+
+  useEffect(() => {
+    void apiRequest<{ status: string }>('/api/health').catch(() => {
+      // Sign-in still reports any connection issue when the user submits the form.
+    })
+  }, [])
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError('')
     setSuccess('')
     setIsSubmitting(true)
+    setIsWaitingForServer(false)
+    const slowConnectionTimer = window.setTimeout(
+      () => setIsWaitingForServer(true),
+      2500,
+    )
 
     try {
       if (mode === 'signup') {
@@ -38,7 +51,9 @@ function AuthPage() {
           : 'Something went wrong. Please try again.',
       )
     } finally {
+      window.clearTimeout(slowConnectionTimer)
       setIsSubmitting(false)
+      setIsWaitingForServer(false)
     }
   }
 
@@ -75,7 +90,7 @@ function AuthPage() {
                     autoComplete="name"
                     value={name}
                     onChange={(event) => setName(event.target.value)}
-                    className="mt-1.5 min-h-12 w-full rounded-lg border border-[#d9e0d7] bg-[#fcfdfa] px-3.5 py-3 outline-none transition focus:border-[#47735a] focus:ring-2 focus:ring-[#e4eee5]"
+                    className="mt-1.5 min-h-12 w-full rounded-lg border border-[#d9e0d7] bg-[#fcfdfa] px-3.5 py-3 text-base outline-none transition focus:border-[#47735a] focus:ring-2 focus:ring-[#e4eee5]"
                   />
                 </label>
               )}
@@ -88,7 +103,7 @@ function AuthPage() {
                   autoComplete="email"
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
-                  className="mt-1.5 min-h-12 w-full rounded-lg border border-[#d9e0d7] bg-[#fcfdfa] px-3.5 py-3 outline-none transition focus:border-[#47735a] focus:ring-2 focus:ring-[#e4eee5]"
+                  className="mt-1.5 min-h-12 w-full rounded-lg border border-[#d9e0d7] bg-[#fcfdfa] px-3.5 py-3 text-base outline-none transition focus:border-[#47735a] focus:ring-2 focus:ring-[#e4eee5]"
                 />
               </label>
 
@@ -104,7 +119,7 @@ function AuthPage() {
                     }
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
-                    className="min-h-12 w-full rounded-lg border border-[#d9e0d7] bg-[#fcfdfa] px-3.5 py-3 pr-12 outline-none transition focus:border-[#47735a] focus:ring-2 focus:ring-[#e4eee5]"
+                    className="min-h-12 w-full rounded-lg border border-[#d9e0d7] bg-[#fcfdfa] px-3.5 py-3 pr-12 text-base outline-none transition focus:border-[#47735a] focus:ring-2 focus:ring-[#e4eee5]"
                   />
 
                   <button
@@ -149,6 +164,11 @@ function AuthPage() {
                     ? 'Sign in'
                     : 'Create account'}
               </button>
+              {isWaitingForServer && (
+                <p role="status" className="text-center text-xs text-slate-500">
+                  The first connection can take a little longer while the server starts.
+                </p>
+              )}
             </form>
 
             <p className="mt-5 text-center text-sm text-slate-600">

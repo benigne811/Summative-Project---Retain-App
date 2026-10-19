@@ -30,24 +30,6 @@ function ReportsPage() {
   const currentMonth = new Date().toISOString().slice(0, 7)
   const [selectedMonth, setSelectedMonth] = useState(currentMonth)
 
-  const availableMonths = useMemo(() => {
-    const months = new Set<string>([currentMonth])
-
-    expenses.forEach((expense) => {
-      if (/^\d{4}-\d{2}/.test(expense.date)) {
-        months.add(expense.date.slice(0, 7))
-      }
-    })
-
-    budgets.forEach((budget) => {
-      if (/^\d{4}-\d{2}$/.test(budget.month)) {
-        months.add(budget.month)
-      }
-    })
-
-    return [...months].sort((a, b) => b.localeCompare(a))
-  }, [expenses, budgets, currentMonth])
-
   const monthlyExpenses = useMemo(
     () =>
       expenses
@@ -111,20 +93,13 @@ function ReportsPage() {
         <label className="flex w-full flex-col items-start gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm sm:w-auto sm:flex-row sm:items-center sm:gap-3">
           <CalendarDays size={18} className="text-emerald-600" />
           <span className="font-medium text-slate-600">Reporting month</span>
-          <select
+          <input
             value={selectedMonth}
+            type="month"
+            aria-label="Select reporting month"
             onChange={(event) => setSelectedMonth(event.target.value)}
-            className="w-full max-w-full bg-transparent font-semibold text-slate-900 outline-none sm:w-auto sm:max-w-40"
-          >
-            {availableMonths.map((month) => (
-              <option key={month} value={month}>
-                {new Date(`${month}-01T00:00:00`).toLocaleDateString('en-US', {
-                  month: 'long',
-                  year: 'numeric',
-                })}
-              </option>
-            ))}
-          </select>
+            className="min-h-10 w-full bg-transparent font-semibold text-slate-900 outline-none sm:w-auto"
+          />
         </label>
       </section>
 

@@ -1,15 +1,12 @@
 ﻿import { useEffect, useState, type FormEvent } from 'react'
 import {
-  CalendarDays,
   ChevronDown,
   CreditCard,
   LayoutDashboard,
   LogOut,
   Menu,
   Plus,
-  ShoppingBag,
   Target,
-  TrendingUp,
   Wallet,
   X,
   ChartNoAxesCombined,
@@ -30,6 +27,8 @@ import type { Expense } from './types/expense'
 import type { ExpenseCategory } from './types/expense'
 import { setCategories } from './features/expenses/categorySlice'
 import AdminPage from './pages/AdminPage'
+import { setBudgets } from './features/budget/budgetSlice'
+import type { MonthlyBudget } from './types/budget'
 
 type ExpenseFormValues = {
   title: string
@@ -202,7 +201,7 @@ function App() {
   const allExpenses = useAppSelector((state) => state.expenses.items)
   const categories = useAppSelector((state) => state.categories)
   const budgets = useAppSelector((state) => state.budgets.items)
-  const { user, signOut, signUp } = useAuth()
+  const { user, signOut, signIn, signUp } = useAuth()
 
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [profileMenuOpen, setProfileMenuOpen] = useState(false)
@@ -215,6 +214,7 @@ function App() {
     () => new Date().toISOString().slice(0, 7),
   )
   const [showAddAccount, setShowAddAccount] = useState(false)
+  const [accountMode, setAccountMode] = useState<'create' | 'switch'>('create')
   const [newAccountName, setNewAccountName] = useState('')
   const [newAccountEmail, setNewAccountEmail] = useState('')
   const [newAccountPassword, setNewAccountPassword] = useState('')
@@ -232,7 +232,19 @@ function App() {
         // Keep the app usable if category loading fails; the page shows no categories.
       })
     return () => { cancelled = true }
-  }, [dispatch])
+  }, [dispatch, user?.id])
+
+  useEffect(() => {
+    let cancelled = false
+    apiRequest<MonthlyBudget[]>('/api/budgets')
+      .then((loadedBudgets) => {
+        if (!cancelled) dispatch(setBudgets(loadedBudgets))
+      })
+      .catch(() => {
+        // The Budgets page reports load errors if this background refresh fails.
+      })
+    return () => { cancelled = true }
+  }, [dispatch, user?.id])
 
   useEffect(() => {
     let cancelled = false
@@ -267,7 +279,7 @@ function App() {
     return () => {
       cancelled = true
     }
-  }, [dispatch])
+  }, [dispatch, user?.id])
 
   const monthlyExpenses = allExpenses.filter((expense) =>
     expense.date.startsWith(dashboardMonth),
@@ -361,11 +373,17 @@ function App() {
     setAccountSubmitting(true)
 
     try {
-      await signUp(newAccountName.trim(), newAccountEmail.trim(), newAccountPassword)
-      setNewAccountName('')
-      setNewAccountEmail('')
-      setNewAccountPassword('')
-      setAccountSuccess('Account created. It can now sign in separately.')
+      if (accountMode === 'create') {
+        await signUp(newAccountName.trim(), newAccountEmail.trim(), newAccountPassword)
+        setAccountMode('switch')
+        setAccountSuccess('Account created. Sign in below to switch to it.')
+      } else {
+        await signIn(newAccountEmail.trim(), newAccountPassword)
+        setShowAddAccount(false)
+        setNewAccountEmail('')
+        setNewAccountPassword('')
+        window.location.reload()
+      }
     } catch (error) {
       setAccountError(error instanceof Error ? error.message : 'Could not create this account.')
     } finally {
@@ -538,6 +556,7 @@ function App() {
                       setProfileMenuOpen(false)
                       setAccountError('')
                       setAccountSuccess('')
+                      setAccountMode('create')
                       setShowAddAccount(true)
                     }}
                     className="mt-2 flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50"
@@ -605,12 +624,8 @@ function App() {
                 <p className="text-sm font-medium text-emerald-700">{today}</p>
 
                 <h2 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-                  Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 18 ? 'afternoon' : 'evening'}, {firstName}.
+                  Welcome, {firstName}.
                 </h2>
-
-                <p className="mt-2 text-sm text-slate-500">
-                  Your spending at a glance.
-                </p>
               </div>
 
               <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
@@ -642,17 +657,13 @@ function App() {
                   <span className="text-sm font-medium text-slate-500">
                     Total spent
                   </span>
-                  <span className="rounded-xl bg-blue-50 p-2.5 text-blue-600">
-                    <Wallet size={20} />
-                  </span>
                 </div>
 
                 <p className="mt-4 text-2xl font-bold tracking-tight text-slate-900">
                   {formatCurrency(spent)}
                 </p>
 
-                <p className="mt-2 flex items-center gap-1 text-xs text-slate-500">
-                  <CalendarDays size={14} />
+                <p className="mt-2 text-xs text-slate-500">
                   {dashboardMonthLabel}
                 </p>
               </div>
@@ -661,9 +672,6 @@ function App() {
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium text-slate-500">
                     Remaining budget
-                  </span>
-                  <span className="rounded-xl bg-emerald-50 p-2.5 text-emerald-600">
-                    <Target size={20} />
                   </span>
                 </div>
 
@@ -701,9 +709,6 @@ function App() {
                   <span className="text-sm font-medium text-slate-500">
                     Highest expense
                   </span>
-                  <span className="rounded-xl bg-orange-50 p-2.5 text-orange-600">
-                    <TrendingUp size={20} />
-                  </span>
                 </div>
 
                 <p className="mt-4 text-2xl font-bold tracking-tight text-slate-900">
@@ -711,34 +716,13 @@ function App() {
                 </p>
 
                 <p className="mt-2 text-xs text-slate-500">
-                  {highestExpense?.title ?? 'No expenses recorded this month'}
+                  {highestExpense?.title ?? `No expenses recorded in ${dashboardMonthLabel}`}
                 </p>
               </div>
             </section>
 
-            <section className="grid gap-6 xl:grid-cols-5">
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm xl:col-span-3 sm:p-6">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <h3 className="font-bold text-slate-900">Spending pace</h3>
-                    <p className="mt-1 text-sm text-slate-500">{dashboardMonthLabel}</p>
-                  </div>
-                  <button onClick={() => setActivePage('Budgets')} className="text-sm font-semibold text-emerald-700 hover:underline">{hasBudget ? 'Edit budget' : 'Set budget'}</button>
-                </div>
-                <div className="mt-8 flex items-end justify-between gap-4">
-                  <div>
-                    <p className="text-xs text-slate-500">Spent</p>
-                    <p className="mt-1 text-2xl font-bold text-slate-900">{formatCurrency(spent)}</p>
-                  </div>
-                  <p className="text-right text-sm text-slate-500">{hasBudget ? `${formatCurrency(Math.abs(remaining))} ${remaining < 0 ? 'over' : 'left'} of ${formatCurrency(budget)}` : 'No limit set'}</p>
-                </div>
-                <div className="mt-4 h-3 overflow-hidden rounded-full bg-slate-100">
-                  <div className={`h-full rounded-full ${remaining < 0 ? 'bg-rose-500' : 'bg-emerald-500'}`} style={{ width: `${budgetPercentage}%` }} />
-                </div>
-                <p className="mt-2 text-xs text-slate-500">{hasBudget ? `${Math.round(budgetPercentage)}% of your limit used` : 'Create a monthly limit to track your spending pace.'}</p>
-              </div>
-
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm xl:col-span-2 sm:p-6">
+            <section>
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
                 <h3 className="font-bold text-slate-900">
                   Spending by category
                 </h3>
@@ -824,10 +808,6 @@ function App() {
                         >
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-3">
-                              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
-                                <ShoppingBag size={19} />
-                              </span>
-
                               <div>
                                 <p className="text-sm font-semibold text-slate-800">
                                   {expense.title}
@@ -878,9 +858,6 @@ function App() {
                   return (
                     <article key={expense.id} className="flex items-start justify-between gap-3 p-4">
                       <div className="flex min-w-0 items-start gap-3">
-                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
-                          <ShoppingBag size={17} />
-                        </span>
                         <div className="min-w-0">
                           <p className="break-words text-sm font-semibold text-slate-800">
                             {expense.title}
@@ -907,12 +884,6 @@ function App() {
                 )}
               </div>
 
-              <div className="flex items-center justify-between border-t border-slate-100 px-6 py-4">
-                <p className="text-xs text-slate-500">
-                  Showing {Math.min(recentExpenses.length, 10)} of{' '}
-                  {monthlyExpenses.length} expenses for {dashboardMonthLabel}
-                </p>
-              </div>
             </section>
           </div>
         ) : (
@@ -994,17 +965,21 @@ function App() {
             <div className="mb-5 flex items-start justify-between gap-4">
               <div>
                 <h2 id="add-account-title" className="text-xl font-bold text-slate-900">Add account</h2>
-                <p className="mt-1 text-sm text-slate-500">Create a separate sign-in for another person.</p>
+                <p className="mt-1 text-sm text-slate-500">Create an account or switch to one you already have.</p>
               </div>
               <button type="button" aria-label="Close add account form" onClick={() => setShowAddAccount(false)} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"><X size={20} /></button>
+            </div>
+            <div className="mb-5 grid grid-cols-2 gap-2 rounded-xl bg-slate-100 p-1">
+              <button type="button" aria-pressed={accountMode === 'create'} onClick={() => { setAccountMode('create'); setAccountError('') }} className={`rounded-lg px-3 py-2.5 text-sm font-semibold ${accountMode === 'create' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}>Create account</button>
+              <button type="button" aria-pressed={accountMode === 'switch'} onClick={() => { setAccountMode('switch'); setAccountError('') }} className={`rounded-lg px-3 py-2.5 text-sm font-semibold ${accountMode === 'switch' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}>Switch account</button>
             </div>
             {accountError && <p role="alert" className="mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">{accountError}</p>}
             {accountSuccess && <p role="status" className="mb-4 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800">{accountSuccess}</p>}
             <form onSubmit={(event) => void handleAddAccount(event)} className="space-y-4">
-              <label className="block text-sm font-medium text-slate-700">Full name<input required autoComplete="name" value={newAccountName} onChange={(event) => setNewAccountName(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 outline-none focus:border-emerald-500" /></label>
-              <label className="block text-sm font-medium text-slate-700">Email address<input required type="email" autoComplete="email" value={newAccountEmail} onChange={(event) => setNewAccountEmail(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 outline-none focus:border-emerald-500" /></label>
-              <label className="block text-sm font-medium text-slate-700">Password<input required minLength={8} type="password" autoComplete="new-password" value={newAccountPassword} onChange={(event) => setNewAccountPassword(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 outline-none focus:border-emerald-500" /></label>
-              <button type="submit" disabled={accountSubmitting} className="w-full rounded-xl bg-emerald-700 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-800 disabled:opacity-60">{accountSubmitting ? 'Creating account…' : 'Create account'}</button>
+              {accountMode === 'create' && <label className="block text-sm font-medium text-slate-700">Full name<input required autoComplete="name" value={newAccountName} onChange={(event) => setNewAccountName(event.target.value)} className="mt-1 min-h-12 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-base outline-none focus:border-emerald-500" /></label>}
+              <label className="block text-sm font-medium text-slate-700">Email address<input required type="email" autoComplete="email" value={newAccountEmail} onChange={(event) => setNewAccountEmail(event.target.value)} className="mt-1 min-h-12 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-base outline-none focus:border-emerald-500" /></label>
+              <label className="block text-sm font-medium text-slate-700">Password<input required minLength={accountMode === 'create' ? 8 : undefined} type="password" autoComplete={accountMode === 'create' ? 'new-password' : 'current-password'} value={newAccountPassword} onChange={(event) => setNewAccountPassword(event.target.value)} className="mt-1 min-h-12 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-base outline-none focus:border-emerald-500" /></label>
+              <button type="submit" disabled={accountSubmitting} className="w-full rounded-xl bg-emerald-700 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-800 disabled:opacity-60">{accountSubmitting ? (accountMode === 'create' ? 'Creating account…' : 'Switching account…') : (accountMode === 'create' ? 'Create account' : 'Sign in and switch')}</button>
             </form>
           </section>
         </div>
