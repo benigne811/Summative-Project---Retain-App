@@ -26,6 +26,7 @@ app.get("/api/health", async (_req, res) => {
       status: "ok",
       message: "Retain backend is running!",
       database: "connected",
+      databaseEngine: db.engine,
     });
   } catch {
     res.status(500).json({

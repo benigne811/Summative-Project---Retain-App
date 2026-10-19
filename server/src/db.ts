@@ -144,4 +144,4 @@ async function transaction<T>(work: (client?: PoolClient) => Promise<T>) {
 
 async function ping() { if (pool) await pool.query("SELECT 1"); else sqlite!.prepare("SELECT 1").get(); }
 
-export default { prepare, initialize, transaction, ping };
+export default { prepare, initialize, transaction, ping, engine: pool ? "PostgreSQL" : "SQLite" };

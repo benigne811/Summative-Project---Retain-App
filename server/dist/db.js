@@ -152,4 +152,4 @@ async function ping() { if (pool)
     await pool.query("SELECT 1");
 else
     sqlite.prepare("SELECT 1").get(); }
-exports.default = { prepare, initialize, transaction, ping };
+exports.default = { prepare, initialize, transaction, ping, engine: pool ? "PostgreSQL" : "SQLite" };
