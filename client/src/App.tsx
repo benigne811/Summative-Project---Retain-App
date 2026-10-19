@@ -1,7 +1,6 @@
 ﻿import { useEffect, useState, type FormEvent } from 'react'
 import {
   ArrowDownLeft,
-  Bell,
   CalendarDays,
   ChevronDown,
   CreditCard,
@@ -10,14 +9,12 @@ import {
   Menu,
   Plus,
   Search,
-  Settings,
   ShoppingBag,
   Target,
   TrendingUp,
   Wallet,
   X,
   ChartNoAxesCombined,
-  CircleHelp,
   ShieldCheck,
 } from 'lucide-react'
 import { useAppDispatch, useAppSelector } from './app/hooks'
@@ -50,11 +47,6 @@ const navigation = [
   { label: 'Expenses', icon: CreditCard },
   { label: 'Budgets', icon: Target },
   { label: 'Reports', icon: ChartNoAxesCombined },
-]
-
-const secondaryNavigation = [
-  { label: 'Settings', icon: Settings },
-  { label: 'Help & Support', icon: CircleHelp },
 ]
 
 function formatCurrency(amount: number) {
@@ -434,43 +426,13 @@ function App() {
           </nav>
         </div>
 
-        <div className="mt-8 px-4">
-          <p className="mb-3 px-3 text-xs font-semibold uppercase tracking-widest text-slate-400">
-            Preferences
-          </p>
-
-          <nav className="space-y-1">
-            {secondaryNavigation.map(({ label, icon: Icon }) => (
-              <button
-                key={label}
-                onClick={() => {
-                  setActivePage(label)
-                  setSidebarOpen(false)
-                }}
-                className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium ${
-                  activePage === label
-                    ? 'bg-emerald-50 text-emerald-700'
-                    : 'text-slate-500 hover:bg-slate-50'
-                }`}
-              >
-                <Icon size={19} />
-                {label}
-              </button>
-            ))}
-          </nav>
-        </div>
-
         <div className="mt-auto p-4">
           <div className="rounded-2xl bg-slate-900 p-4 text-white">
             <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-white/10">
               <Target size={19} />
             </div>
 
-            <p className="font-semibold">Stay on track</p>
-
-            <p className="mt-1 text-xs leading-5 text-slate-300">
-              Small steps today lead to better financial habits tomorrow.
-            </p>
+            <p className="font-semibold">Monthly budget</p>
 
             <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-white/15">
               <div
@@ -493,7 +455,7 @@ function App() {
               }}
               className="mt-3 text-xs font-semibold text-emerald-300 hover:text-white"
             >
-              Manage budget →
+              View budget →
             </button>
           </div>
 
@@ -524,9 +486,6 @@ function App() {
                 {activePage}
               </h1>
 
-              <p className="hidden text-xs text-slate-500 sm:block">
-                Your money, thoughtfully managed.
-              </p>
             </div>
           </div>
 
@@ -541,14 +500,6 @@ function App() {
                 className="w-36 bg-transparent text-sm outline-none placeholder:text-slate-400 lg:w-48"
               />
             </label>
-
-            <button
-              aria-label="Notifications"
-              className="relative rounded-xl border border-slate-200 p-2.5 text-slate-500 hover:bg-slate-50"
-            >
-              <Bell size={19} />
-              <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-emerald-500 ring-2 ring-white" />
-            </button>
 
             <div className="relative">
               <button
@@ -849,10 +800,6 @@ function App() {
                   Spending by category
                 </h3>
 
-                <p className="mt-1 text-sm text-slate-500">
-                  Where your money goes.
-                </p>
-
                 <div className="mt-6 space-y-6">
                   {categorySpending.length > 0 ? (
                     categorySpending.map((category) => (
@@ -900,10 +847,6 @@ function App() {
               <div className="flex flex-col justify-between gap-3 border-b border-slate-100 p-5 sm:flex-row sm:items-center sm:p-6">
                 <div>
                   <h3 className="font-bold text-slate-900">Recent expenses</h3>
-
-                  <p className="mt-1 text-sm text-slate-500">
-                    Your recorded transactions.
-                  </p>
                 </div>
 
                 <button
@@ -1039,10 +982,6 @@ function App() {
                 </button>
               </div>
             </section>
-
-            <footer className="pb-2 text-center text-xs text-slate-400">
-              Retain © 2026 · Make every shilling count.
-            </footer>
           </div>
         ) : (
           <div className="mx-auto max-w-7xl p-4 sm:p-8">
@@ -1050,10 +989,6 @@ function App() {
               <h2 className="text-xl font-bold text-slate-900">
                 {activePage}
               </h2>
-
-              <p className="mt-2 text-sm text-slate-500">
-                This section is not available yet. We'll build it next.
-              </p>
 
               <button
                 onClick={() => setActivePage('Dashboard')}

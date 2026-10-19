@@ -187,9 +187,7 @@ export default function AdminPage() {
     <div className="space-y-7">
       <section className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <p className="text-sm font-medium text-emerald-700">Platform overview</p>
-          <h2 className="mt-1 text-2xl font-bold text-slate-900 sm:text-3xl">Admin dashboard</h2>
-          <p className="mt-2 text-sm text-slate-500">Review activity and manage the shared expense categories.</p>
+          <h2 className="text-2xl font-bold text-slate-900 sm:text-3xl">Admin</h2>
         </div>
         <button type="button" onClick={() => void loadInsights()} disabled={loading} className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">
           <RefreshCw size={16} className={loading ? 'animate-spin' : ''} /> Refresh insights

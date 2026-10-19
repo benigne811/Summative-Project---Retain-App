@@ -352,9 +352,6 @@ export default function ExpensesPage() {
           <h2 className="text-2xl font-bold tracking-tight text-slate-900">
             Your expenses
           </h2>
-          <p className="mt-1 text-sm text-slate-500">
-            View, search, edit, and manage your transactions.
-          </p>
         </div>
 
         <p className="text-sm text-slate-500">

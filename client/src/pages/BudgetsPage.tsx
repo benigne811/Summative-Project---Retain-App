@@ -365,8 +365,7 @@ export default function BudgetsPage() {
           {hasBudget ? 'Update monthly budget' : 'Set monthly budget'}
         </h3>
         <p className="mt-1 text-sm text-slate-500">
-          Choose the maximum amount you plan to spend in{' '}
-          {formatMonth(selectedMonth)}.
+          Spending limit for {formatMonth(selectedMonth)}.
         </p>
 
         <form

@@ -103,15 +103,9 @@ function ReportsPage() {
     <div className="mx-auto max-w-7xl space-y-7">
       <section className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <p className="text-sm font-medium text-emerald-700">
-            Your financial overview
-          </p>
-          <h2 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+          <h2 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
             Spending reports
           </h2>
-          <p className="mt-2 text-sm text-slate-500">
-            Understand your spending and make informed financial decisions.
-          </p>
         </div>
 
         <label className="flex w-full flex-col items-start gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm sm:w-auto sm:flex-row sm:items-center sm:gap-3">
@@ -380,9 +374,6 @@ function ReportsPage() {
         )}
       </section>
 
-      <footer className="pb-2 text-center text-xs text-slate-400">
-        Retain © 2026 · Make every shilling count.
-      </footer>
     </div>
   )
 }
