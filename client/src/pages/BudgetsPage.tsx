@@ -8,6 +8,7 @@ import {
 } from '../features/budget/budgetSlice'
 import type { MonthlyBudget } from '../types/budget'
 import { apiRequest } from '../services/api'
+import { useCurrency } from '../features/settings/useCurrency'
 
 function getCurrentMonth() {
   const now = new Date()
@@ -15,14 +16,6 @@ function getCurrentMonth() {
   const month = String(now.getMonth() + 1).padStart(2, '0')
 
   return `${year}-${month}`
-}
-
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat('en-RW', {
-    style: 'currency',
-    currency: 'RWF',
-    maximumFractionDigits: 0,
-  }).format(amount)
 }
 
 function formatMonth(month: string) {
@@ -38,6 +31,7 @@ function formatMonth(month: string) {
 
 export default function BudgetsPage() {
   const dispatch = useAppDispatch()
+  const { formatCurrency } = useCurrency()
 
   const expenses = useAppSelector((state) => state.expenses.items)
   const budgets = useAppSelector((state) => state.budgets.items)

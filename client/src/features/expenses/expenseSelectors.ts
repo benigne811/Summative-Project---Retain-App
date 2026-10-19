@@ -2,16 +2,18 @@
 import { createSelector } from '@reduxjs/toolkit'
 import type { RootState } from '../../app/store'
 import type { Expense } from '../../types/expense'
+import { formatCurrency } from '../../utils/currency'
 
 const selectExpenses = (state: RootState) => state.expenses.items
 
 const selectFilters = (state: RootState) => state.expenses.filters
 
 const selectCategories = (state: RootState) => state.categories
+const selectCurrency = (state: RootState) => state.settings.currency
 
 export const selectFilteredExpenses = createSelector(
-  [selectExpenses, selectFilters, selectCategories],
-  (expenses, filters, categories): Expense[] => {
+  [selectExpenses, selectFilters, selectCategories, selectCurrency],
+  (expenses, filters, categories, currency): Expense[] => {
     const searchTerms = filters.search
       .trim()
       .toLocaleLowerCase()
@@ -50,11 +52,7 @@ export const selectFilteredExpenses = createSelector(
         ...dateLabels,
         String(expense.amount),
         expense.amount.toLocaleString('en-RW'),
-        new Intl.NumberFormat('en-RW', {
-          style: 'currency',
-          currency: 'RWF',
-          maximumFractionDigits: 0,
-        }).format(expense.amount),
+        formatCurrency(expense.amount, currency),
       ]
         .filter(Boolean)
         .join(' ')

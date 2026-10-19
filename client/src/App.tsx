@@ -12,6 +12,7 @@ import {
   ChartNoAxesCombined,
   ShieldCheck,
   UserPlus,
+  Settings,
 } from 'lucide-react'
 import { useAppDispatch, useAppSelector } from './app/hooks'
 import {
@@ -29,6 +30,8 @@ import { setCategories } from './features/expenses/categorySlice'
 import AdminPage from './pages/AdminPage'
 import { setBudgets } from './features/budget/budgetSlice'
 import type { MonthlyBudget } from './types/budget'
+import SettingsPage from './pages/SettingsPage'
+import { useCurrency } from './features/settings/useCurrency'
 
 type ExpenseFormValues = {
   title: string
@@ -43,15 +46,8 @@ const navigation = [
   { label: 'Expenses', icon: CreditCard },
   { label: 'Budgets', icon: Target },
   { label: 'Reports', icon: ChartNoAxesCombined },
+  { label: 'Settings', icon: Settings },
 ]
-
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat('en-RW', {
-    style: 'currency',
-    currency: 'RWF',
-    maximumFractionDigits: 0,
-  }).format(amount)
-}
 
 function formatDate(date: string) {
   if (!date) return '—'
@@ -202,6 +198,7 @@ function App() {
   const categories = useAppSelector((state) => state.categories)
   const budgets = useAppSelector((state) => state.budgets.items)
   const { user, signOut, signIn, signUp } = useAuth()
+  const { formatCurrency } = useCurrency()
 
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [profileMenuOpen, setProfileMenuOpen] = useState(false)
@@ -616,6 +613,10 @@ function App() {
         ) : activePage === 'Admin' && user?.role === 'admin' ? (
           <div className="mx-auto max-w-7xl p-4 sm:p-8">
             <AdminPage />
+          </div>
+        ) : activePage === 'Settings' ? (
+          <div className="mx-auto max-w-7xl p-4 sm:p-8">
+            <SettingsPage />
           </div>
         ) : activePage === 'Dashboard' ? (
           <div className="mx-auto max-w-7xl space-y-7 p-4 sm:p-8">

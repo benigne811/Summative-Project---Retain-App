@@ -16,6 +16,7 @@ import {
 } from '../features/expenses/expenseSlice'
 import { apiRequest } from '../services/api'
 import { useExpenses } from '../features/expenses/useExpenses'
+import { useCurrency } from '../features/settings/useCurrency'
 import type { Expense, PaymentMethod } from '../types/expense'
 
 const paymentMethods: PaymentMethod[] = [
@@ -34,14 +35,6 @@ type ExpenseFormValues = {
   paymentMethod: PaymentMethod
   description?: string
   notes?: string
-}
-
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat('en-RW', {
-    style: 'currency',
-    currency: 'RWF',
-    maximumFractionDigits: 0,
-  }).format(amount)
 }
 
 function formatDate(date: string) {
@@ -264,6 +257,7 @@ function ExpenseEditor({
 }
 
 export default function ExpensesPage() {
+  const { formatCurrency } = useCurrency()
   const dispatch = useAppDispatch()
   const categories = useAppSelector((state) => state.categories)
   const filters = useAppSelector((state) => state.expenses.filters)

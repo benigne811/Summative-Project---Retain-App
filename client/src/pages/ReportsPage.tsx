@@ -3,14 +3,7 @@ import { useMemo, useState } from 'react'
 import { CalendarDays, ChartNoAxesCombined, Receipt, Wallet } from 'lucide-react'
 import { useAppSelector } from '../app/hooks'
 import type { Expense } from '../types/expense'
-
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat('en-RW', {
-    style: 'currency',
-    currency: 'RWF',
-    maximumFractionDigits: 0,
-  }).format(amount)
-}
+import { useCurrency } from '../features/settings/useCurrency'
 
 function formatDate(date: string) {
   if (!date) return '—'
@@ -23,6 +16,7 @@ function formatDate(date: string) {
 }
 
 function ReportsPage() {
+  const { formatCurrency } = useCurrency()
   const expenses = useAppSelector((state) => state.expenses.items)
   const categories = useAppSelector((state) => state.categories)
   const budgets = useAppSelector((state) => state.budgets.items)

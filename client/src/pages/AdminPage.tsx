@@ -7,6 +7,7 @@ import { apiRequest } from '../services/api'
 import { useAuth } from '../context/useAuth'
 import type { ExpenseCategory } from '../types/expense'
 import type { Expense } from '../types/expense'
+import { useCurrency } from '../features/settings/useCurrency'
 
 interface AdminInsights {
   currentMonth: string
@@ -47,10 +48,6 @@ const emptyInsights: AdminInsights = {
   recentUsers: [],
 }
 
-function currency(value: number) {
-  return new Intl.NumberFormat('en-RW', { style: 'currency', currency: 'RWF', maximumFractionDigits: 0 }).format(value)
-}
-
 function dateLabel(value: string) {
   if (!value) return '—'
   const parsed = new Date(value.includes('T') ? value : `${value.slice(0, 10)}T00:00:00`)
@@ -58,6 +55,7 @@ function dateLabel(value: string) {
 }
 
 export default function AdminPage() {
+  const { formatCurrency: currency } = useCurrency()
   const { user } = useAuth()
   const dispatch = useAppDispatch()
   const categories = useAppSelector((state) => state.categories)
