@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import { useAppDispatch, useAppSelector } from '../app/hooks'
 import { addCategory, deleteCategory, setCategories, updateCategory } from '../features/expenses/categorySlice'
@@ -69,6 +69,8 @@ export default function AdminPage() {
   const [editing, setEditing] = useState<ExpenseCategory | null>(null)
   const [name, setName] = useState('')
   const [color, setColor] = useState('#10b981')
+  const categoryFormRef = useRef<HTMLFormElement>(null)
+  const categoryNameRef = useRef<HTMLInputElement>(null)
 
   const loadInsights = useCallback(async () => {
     setLoading(true)
@@ -116,6 +118,10 @@ export default function AdminPage() {
     setColor(category.color ?? '#10b981')
     setError('')
     setNotice('')
+    window.requestAnimationFrame(() => {
+      categoryFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      categoryNameRef.current?.focus({ preventScroll: true })
+    })
   }
 
   function resetForm() {
@@ -208,9 +214,10 @@ export default function AdminPage() {
         <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
           <h3 className="font-bold text-slate-900">Manage categories</h3>
           <p className="mt-1 text-sm text-slate-500">Categories are shared across the platform.</p>
-          <form onSubmit={handleSubmit} className="mt-5 grid gap-3 sm:grid-cols-[1fr_auto_auto] sm:items-end">
+          {editing && <p role="status" className="mt-4 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">Editing “{editing.name}”. Change the fields, then select Save changes.</p>}
+          <form ref={categoryFormRef} onSubmit={handleSubmit} className="mt-5 grid gap-3 sm:grid-cols-[1fr_auto_auto] sm:items-end">
             <label className="text-sm font-medium text-slate-700">Category name
-              <input required maxLength={60} value={name} onChange={(event) => setName(event.target.value)} placeholder="e.g. Education" className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 outline-none focus:border-emerald-500" />
+              <input ref={categoryNameRef} required maxLength={60} value={name} onChange={(event) => setName(event.target.value)} placeholder="e.g. Education" className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 outline-none focus:border-emerald-500" />
             </label>
             <label className="text-sm font-medium text-slate-700">Color
               <input type="color" value={color} onChange={(event) => setColor(event.target.value)} aria-label="Category color" className="mt-1 block h-11 w-16 rounded-lg border border-slate-200 bg-white p-1" />
@@ -218,7 +225,7 @@ export default function AdminPage() {
             <div className="flex gap-2">
               {editing && <button type="button" onClick={resetForm} className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-600">Cancel</button>}
               <button type="submit" disabled={saving || !name.trim()} className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50">
-                {editing ? <Pencil size={16} /> : <Plus size={17} />}{saving ? 'Saving…' : editing ? 'Update' : 'Add'}
+                {editing ? <Pencil size={16} /> : <Plus size={17} />}{saving ? 'Saving…' : editing ? 'Save changes' : 'Add category'}
               </button>
             </div>
           </form>
