@@ -357,7 +357,7 @@ function App() {
   const userInitial = displayName.charAt(0).toUpperCase() || 'U'
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800">
+    <div className="retain-app min-h-screen bg-slate-50 text-slate-800">
       {sidebarOpen && (
         <button
           aria-label="Close navigation"

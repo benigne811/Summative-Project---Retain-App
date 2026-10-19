@@ -21,3 +21,22 @@ body {
   min-width: 320px;
   min-height: 100vh;
 }
+
+.retain-app {
+  background-color: #f3f4ee;
+}
+
+.retain-app h1,
+.retain-app h2,
+.retain-app h3 {
+  font-family: Georgia, "Times New Roman", serif;
+  letter-spacing: -0.025em;
+}
+
+.retain-app .rounded-2xl {
+  border-radius: 0.85rem;
+}
+
+.retain-app .shadow-sm {
+  box-shadow: 0 1px 2px rgb(39 53 41 / 5%);
+}
