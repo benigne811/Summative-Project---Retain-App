@@ -22,7 +22,7 @@ if (!pool) {
     sqlite.pragma("journal_mode = WAL");
     sqlite.pragma("foreign_keys = ON");
 }
-const quotedColumns = /\b(userId|categoryId|paymentMethod|createdAt|updatedAt|tokenHash|expiresAt|passwordHash)\b/g;
+const quotedColumns = /\b(userId|categoryId|paymentMethod|createdAt|updatedAt|tokenHash|expiresAt|passwordHash|totalUsers|totalExpenses|totalExpenseValue|currentMonthExpenses|categoryName|expenseCount|totalAmount|userName|userEmail)\b/g;
 function namedParameters(sql, args) {
     if (args.length === 1 && args[0] && typeof args[0] === "object" && !Array.isArray(args[0])) {
         const object = args[0];
@@ -43,7 +43,7 @@ function pgSql(sql) {
 async function execute(sql, args = [], client) {
     if (pool) {
         const result = await (client ?? activeClient.getStore() ?? pool).query(pgSql(sql), args);
-        const numeric = new Set(["count", "totalUsers", "totalExpenses", "currentMonthExpenses", "expenseCount"]);
+        const numeric = new Set(["count", "totalUsers", "totalExpenses", "totalExpenseValue", "currentMonthExpenses", "expenseCount", "totalAmount"]);
         result.rows = result.rows.map((row) => Object.fromEntries(Object.entries(row).map(([key, value]) => [key, numeric.has(key) && typeof value === "string" ? Number(value) : value])));
         return result;
     }
