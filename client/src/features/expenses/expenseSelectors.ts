@@ -65,11 +65,13 @@ export const selectFilteredExpenses = createSelector(
 
       const matchesCategory =
         filters.categoryId === 'all' ||
-        expense.categoryId === filters.categoryId
+        String(expense.categoryId).trim().toLocaleLowerCase() ===
+          String(filters.categoryId).trim().toLocaleLowerCase()
 
       const matchesPaymentMethod =
         filters.paymentMethod === 'all' ||
-        expense.paymentMethod === filters.paymentMethod
+        String(expense.paymentMethod).trim().toLocaleLowerCase() ===
+          String(filters.paymentMethod).trim().toLocaleLowerCase()
 
       const matchesStartDate =
         !filters.startDate || expenseDate >= filters.startDate

@@ -1,6 +1,5 @@
 ﻿import { useEffect, useState, type FormEvent } from 'react'
 import {
-  ArrowDownLeft,
   CalendarDays,
   ChevronDown,
   CreditCard,
@@ -15,6 +14,7 @@ import {
   X,
   ChartNoAxesCombined,
   ShieldCheck,
+  UserPlus,
 } from 'lucide-react'
 import { useAppDispatch, useAppSelector } from './app/hooks'
 import {
@@ -202,7 +202,7 @@ function App() {
   const allExpenses = useAppSelector((state) => state.expenses.items)
   const categories = useAppSelector((state) => state.categories)
   const budgets = useAppSelector((state) => state.budgets.items)
-  const { user, signOut } = useAuth()
+  const { user, signOut, signUp } = useAuth()
 
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [profileMenuOpen, setProfileMenuOpen] = useState(false)
@@ -211,6 +211,13 @@ function App() {
   const [expenseError, setExpenseError] = useState('')
   const [expensesLoading, setExpensesLoading] = useState(true)
   const [expensesLoadError, setExpensesLoadError] = useState('')
+  const [showAddAccount, setShowAddAccount] = useState(false)
+  const [newAccountName, setNewAccountName] = useState('')
+  const [newAccountEmail, setNewAccountEmail] = useState('')
+  const [newAccountPassword, setNewAccountPassword] = useState('')
+  const [accountError, setAccountError] = useState('')
+  const [accountSuccess, setAccountSuccess] = useState('')
+  const [accountSubmitting, setAccountSubmitting] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -340,6 +347,25 @@ function App() {
     await signOut()
   }
 
+  async function handleAddAccount(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setAccountError('')
+    setAccountSuccess('')
+    setAccountSubmitting(true)
+
+    try {
+      await signUp(newAccountName.trim(), newAccountEmail.trim(), newAccountPassword)
+      setNewAccountName('')
+      setNewAccountEmail('')
+      setNewAccountPassword('')
+      setAccountSuccess('Account created. It can now sign in separately.')
+    } catch (error) {
+      setAccountError(error instanceof Error ? error.message : 'Could not create this account.')
+    } finally {
+      setAccountSubmitting(false)
+    }
+  }
+
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
     month: 'long',
@@ -422,38 +448,6 @@ function App() {
         </div>
 
         <div className="mt-auto p-4">
-          <div className="rounded-2xl bg-slate-900 p-4 text-white">
-            <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-white/10">
-              <Target size={19} />
-            </div>
-
-            <p className="font-semibold">Monthly budget</p>
-
-            <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-white/15">
-              <div
-                className="h-full rounded-full bg-emerald-400"
-                style={{ width: `${budgetPercentage}%` }}
-              />
-            </div>
-
-            <p className="mt-2 text-xs text-slate-300">
-              {hasBudget
-                ? `${Math.round(budgetPercentage)}% of budget used`
-                : 'No monthly budget set'}
-            </p>
-
-            <button
-              type="button"
-              onClick={() => {
-                setActivePage('Budgets')
-                setSidebarOpen(false)
-              }}
-              className="mt-3 text-xs font-semibold text-emerald-300 hover:text-white"
-            >
-              View budget →
-            </button>
-          </div>
-
           <button
             type="button"
             onClick={() => void handleSignOut()}
@@ -533,6 +527,20 @@ function App() {
                   <button
                     type="button"
                     role="menuitem"
+                    onClick={() => {
+                      setProfileMenuOpen(false)
+                      setAccountError('')
+                      setAccountSuccess('')
+                      setShowAddAccount(true)
+                    }}
+                    className="mt-2 flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                  >
+                    <UserPlus size={17} />
+                    Add account
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
                     onClick={() => void handleSignOut()}
                     className="mt-2 flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-red-700 hover:bg-red-50"
                   >
@@ -590,11 +598,11 @@ function App() {
                 <p className="text-sm font-medium text-emerald-700">{today}</p>
 
                 <h2 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-                  Welcome back, {firstName}!
+                  Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 18 ? 'afternoon' : 'evening'}, {firstName}.
                 </h2>
 
                 <p className="mt-2 text-sm text-slate-500">
-                  Here is an overview of your finances this month.
+                  Your month at a glance.
                 </p>
               </div>
 
@@ -692,91 +700,24 @@ function App() {
 
             <section className="grid gap-6 xl:grid-cols-5">
               <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm xl:col-span-3 sm:p-6">
-                <h3 className="font-bold text-slate-900">Monthly spending</h3>
-
-                <p className="mt-1 text-sm text-slate-500">
-                  Keep an eye on your monthly budget.
-                </p>
-
-                <div className="mt-8 grid grid-cols-2 gap-4">
+                <div className="flex items-start justify-between gap-4">
                   <div>
-                    <p className="text-xs text-slate-500">Spent so far</p>
-                    <p className="mt-1 text-lg font-bold text-slate-900">
-                      {formatCurrency(spent)}
-                    </p>
+                    <h3 className="font-bold text-slate-900">Spending pace</h3>
+                    <p className="mt-1 text-sm text-slate-500">{new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</p>
                   </div>
-
+                  <button onClick={() => setActivePage('Budgets')} className="text-sm font-semibold text-emerald-700 hover:underline">{hasBudget ? 'Edit budget' : 'Set budget'}</button>
+                </div>
+                <div className="mt-8 flex items-end justify-between gap-4">
                   <div>
-                    <p className="text-xs text-slate-500">Monthly limit</p>
-                    <p className="mt-1 text-lg font-bold text-slate-900">
-                      {hasBudget ? formatCurrency(budget) : 'Not set'}
-                    </p>
+                    <p className="text-xs text-slate-500">Spent</p>
+                    <p className="mt-1 text-2xl font-bold text-slate-900">{formatCurrency(spent)}</p>
                   </div>
+                  <p className="text-right text-sm text-slate-500">{hasBudget ? `${formatCurrency(Math.abs(remaining))} ${remaining < 0 ? 'over' : 'left'} of ${formatCurrency(budget)}` : 'No limit set'}</p>
                 </div>
-
-                <div className="mt-6 h-4 overflow-hidden rounded-full bg-slate-100">
-                  <div
-                    className={`h-full rounded-full transition-all ${
-                      remaining < 0 ? 'bg-red-500' : 'bg-emerald-500'
-                    }`}
-                    style={{ width: `${budgetPercentage}%` }}
-                  />
+                <div className="mt-4 h-3 overflow-hidden rounded-full bg-slate-100">
+                  <div className={`h-full rounded-full ${remaining < 0 ? 'bg-rose-500' : 'bg-emerald-500'}`} style={{ width: `${budgetPercentage}%` }} />
                 </div>
-
-                <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
-                  <span>
-                    {hasBudget
-                      ? `${Math.round(budgetPercentage)}% used`
-                      : 'No budget set'}
-                  </span>
-                  <span>
-                    {hasBudget ? (
-                      `${formatCurrency(remaining)} left`
-                    ) : (
-                      <button
-                        onClick={() => setActivePage('Budgets')}
-                        className="font-semibold text-emerald-700 hover:underline"
-                      >
-                        Set budget
-                      </button>
-                    )}
-                  </span>
-                </div>
-
-                <div className="mt-8 rounded-xl bg-emerald-50 p-4">
-                  <div className="flex items-start gap-3">
-                    <span className="rounded-lg bg-white p-2 text-emerald-600">
-                      <ArrowDownLeft size={18} />
-                    </span>
-
-                    <div>
-                      <p className="text-sm font-semibold text-emerald-900">
-                        {!hasBudget
-                          ? 'Create your monthly budget'
-                          : remaining >= 0
-                            ? "You're within your budget!"
-                            : "You've exceeded your budget."}
-                      </p>
-
-                      <p className="mt-1 text-xs leading-5 text-emerald-800">
-                        {!hasBudget
-                          ? 'Set a spending limit to track how much you have left each month.'
-                          : remaining >= 0
-                            ? `You still have ${formatCurrency(remaining)} available this month.`
-                            : `You're ${formatCurrency(Math.abs(remaining))} over your monthly limit.`}
-                      </p>
-
-                      {!hasBudget && (
-                        <button
-                          onClick={() => setActivePage('Budgets')}
-                          className="mt-2 text-xs font-semibold text-emerald-800 underline"
-                        >
-                          Set monthly budget
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
+                <p className="mt-2 text-xs text-slate-500">{hasBudget ? `${Math.round(budgetPercentage)}% of your limit used` : 'Create a monthly limit to track your spending pace.'}</p>
               </div>
 
               <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm xl:col-span-2 sm:p-6">
@@ -1027,6 +968,27 @@ function App() {
               onCancel={() => setShowExpenseForm(false)}
             />
           </div>
+        </div>
+      )}
+      {showAddAccount && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4">
+          <section role="dialog" aria-modal="true" aria-labelledby="add-account-title" className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+            <div className="mb-5 flex items-start justify-between gap-4">
+              <div>
+                <h2 id="add-account-title" className="text-xl font-bold text-slate-900">Add account</h2>
+                <p className="mt-1 text-sm text-slate-500">Create a separate sign-in for another person.</p>
+              </div>
+              <button type="button" aria-label="Close add account form" onClick={() => setShowAddAccount(false)} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"><X size={20} /></button>
+            </div>
+            {accountError && <p role="alert" className="mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">{accountError}</p>}
+            {accountSuccess && <p role="status" className="mb-4 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800">{accountSuccess}</p>}
+            <form onSubmit={(event) => void handleAddAccount(event)} className="space-y-4">
+              <label className="block text-sm font-medium text-slate-700">Full name<input required autoComplete="name" value={newAccountName} onChange={(event) => setNewAccountName(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 outline-none focus:border-emerald-500" /></label>
+              <label className="block text-sm font-medium text-slate-700">Email address<input required type="email" autoComplete="email" value={newAccountEmail} onChange={(event) => setNewAccountEmail(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 outline-none focus:border-emerald-500" /></label>
+              <label className="block text-sm font-medium text-slate-700">Password<input required minLength={8} type="password" autoComplete="new-password" value={newAccountPassword} onChange={(event) => setNewAccountPassword(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 outline-none focus:border-emerald-500" /></label>
+              <button type="submit" disabled={accountSubmitting} className="w-full rounded-xl bg-emerald-700 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-800 disabled:opacity-60">{accountSubmitting ? 'Creating account…' : 'Create account'}</button>
+            </form>
+          </section>
         </div>
       )}
     </div>
