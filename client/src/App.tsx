@@ -211,6 +211,9 @@ function App() {
   const [expenseError, setExpenseError] = useState('')
   const [expensesLoading, setExpensesLoading] = useState(true)
   const [expensesLoadError, setExpensesLoadError] = useState('')
+  const [dashboardMonth, setDashboardMonth] = useState(
+    () => new Date().toISOString().slice(0, 7),
+  )
   const [showAddAccount, setShowAddAccount] = useState(false)
   const [newAccountName, setNewAccountName] = useState('')
   const [newAccountEmail, setNewAccountEmail] = useState('')
@@ -266,10 +269,8 @@ function App() {
     }
   }, [dispatch])
 
-  const currentMonth = new Date().toISOString().slice(0, 7)
-
   const monthlyExpenses = allExpenses.filter((expense) =>
-    expense.date.startsWith(currentMonth),
+    expense.date.startsWith(dashboardMonth),
   )
 
   const spent = monthlyExpenses.reduce(
@@ -277,7 +278,7 @@ function App() {
     0,
   )
 
-  const currentBudget = budgets.find((item) => item.month === currentMonth)
+  const currentBudget = budgets.find((item) => item.month === dashboardMonth)
   const budget = currentBudget?.limit ?? 0
   const hasBudget = budget > 0
   const remaining = hasBudget ? budget - spent : 0
@@ -301,6 +302,12 @@ function App() {
     .filter((category) => category.amount > 0)
     .sort((a, b) => b.amount - a.amount)
     .slice(0, 4)
+
+  const dashboardMonthLabel = new Date(`${dashboardMonth}-01T00:00:00`).toLocaleDateString('en-US', {
+    month: 'long',
+    year: 'numeric',
+  })
+  const recentExpenses = monthlyExpenses.slice(0, 10)
 
   async function handleAddExpense(values: ExpenseFormValues) {
     setExpenseError('')
@@ -602,17 +609,31 @@ function App() {
                 </h2>
 
                 <p className="mt-2 text-sm text-slate-500">
-                  Your month at a glance.
+                  Your spending at a glance.
                 </p>
               </div>
 
-              <button
-                onClick={() => setShowExpenseForm(true)}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
-              >
-                <Plus size={18} />
-                Add expense
-              </button>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                <label className="text-xs font-semibold text-slate-500">
+                  Dashboard month
+                  <input
+                    aria-label="Select dashboard month"
+                    type="month"
+                    value={dashboardMonth}
+                    onChange={(event) => {
+                      if (event.target.value) setDashboardMonth(event.target.value)
+                    }}
+                    className="mt-1 block min-h-12 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-emerald-500"
+                  />
+                </label>
+                <button
+                  onClick={() => setShowExpenseForm(true)}
+                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+                >
+                  <Plus size={18} />
+                  Add expense
+                </button>
+              </div>
             </section>
 
             <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -632,10 +653,7 @@ function App() {
 
                 <p className="mt-2 flex items-center gap-1 text-xs text-slate-500">
                   <CalendarDays size={14} />
-                  {new Date().toLocaleDateString('en-US', {
-                    month: 'long',
-                    year: 'numeric',
-                  })}
+                  {dashboardMonthLabel}
                 </p>
               </div>
 
@@ -703,7 +721,7 @@ function App() {
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <h3 className="font-bold text-slate-900">Spending pace</h3>
-                    <p className="mt-1 text-sm text-slate-500">{new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</p>
+                    <p className="mt-1 text-sm text-slate-500">{dashboardMonthLabel}</p>
                   </div>
                   <button onClick={() => setActivePage('Budgets')} className="text-sm font-semibold text-emerald-700 hover:underline">{hasBudget ? 'Edit budget' : 'Set budget'}</button>
                 </div>
@@ -794,7 +812,7 @@ function App() {
                   </thead>
 
                   <tbody className="divide-y divide-slate-100">
-                    {allExpenses.slice(0, 10).map((expense) => {
+                    {recentExpenses.map((expense) => {
                       const category = categories.find(
                         (item) => item.id === expense.categoryId,
                       )
@@ -837,13 +855,13 @@ function App() {
                       )
                     })}
 
-                    {allExpenses.length === 0 && (
+                    {recentExpenses.length === 0 && (
                       <tr>
                         <td
                           colSpan={4}
                           className="px-6 py-10 text-center text-sm text-slate-500"
                         >
-                          No expenses yet. Select Add expense to record your first transaction.
+                          No expenses for {dashboardMonthLabel}.
                         </td>
                       </tr>
                     )}
@@ -852,7 +870,7 @@ function App() {
               </div>
 
               <div className="divide-y divide-slate-100 sm:hidden">
-                {allExpenses.slice(0, 10).map((expense) => {
+                {recentExpenses.map((expense) => {
                   const category = categories.find(
                     (item) => item.id === expense.categoryId,
                   )
@@ -882,17 +900,17 @@ function App() {
                   )
                 })}
 
-                {allExpenses.length === 0 && (
+                {recentExpenses.length === 0 && (
                   <p className="px-4 py-10 text-center text-sm text-slate-500">
-                    No expenses yet. Select Add expense to record your first transaction.
+                    No expenses for {dashboardMonthLabel}.
                   </p>
                 )}
               </div>
 
               <div className="flex items-center justify-between border-t border-slate-100 px-6 py-4">
                 <p className="text-xs text-slate-500">
-                  Showing {Math.min(allExpenses.length, 10)} of{' '}
-                  {allExpenses.length} expenses
+                  Showing {Math.min(recentExpenses.length, 10)} of{' '}
+                  {monthlyExpenses.length} expenses for {dashboardMonthLabel}
                 </p>
               </div>
             </section>
