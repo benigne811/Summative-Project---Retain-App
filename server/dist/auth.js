@@ -12,16 +12,23 @@ const db_js_1 = __importDefault(require("./db.js"));
 function hashToken(token) {
     return (0, node_crypto_1.createHash)("sha256").update(token).digest("hex");
 }
-function requireAuth(req, res, next) {
+async function requireAuth(req, res, next) {
     const authorization = req.header("Authorization");
     const token = authorization?.startsWith("Bearer ") ? authorization.slice(7) : "";
     if (!token) {
         res.status(401).json({ error: "Please sign in to continue." });
         return;
     }
-    const session = db_js_1.default.prepare(`
-    SELECT userId FROM sessions WHERE tokenHash = ? AND expiresAt > datetime('now')
-  `).get(hashToken(token));
+    let session;
+    try {
+        session = await db_js_1.default.prepare(`
+      SELECT userId FROM sessions WHERE tokenHash = ? AND expiresAt > datetime('now')
+    `).get(hashToken(token));
+    }
+    catch {
+        res.status(500).json({ error: "Could not verify your session." });
+        return;
+    }
     if (!session) {
         res.status(401).json({ error: "Your session has expired. Please sign in again." });
         return;
@@ -29,9 +36,15 @@ function requireAuth(req, res, next) {
     req.userId = session.userId;
     next();
 }
-function requireAdmin(req, res, next) {
-    const role = db_js_1.default.prepare("SELECT role FROM users WHERE id = ?")
-        .get(req.userId);
+async function requireAdmin(req, res, next) {
+    let role;
+    try {
+        role = await db_js_1.default.prepare("SELECT role FROM users WHERE id = ?").get(req.userId);
+    }
+    catch {
+        res.status(500).json({ error: "Could not verify administrator access." });
+        return;
+    }
     if (role?.role !== "admin") {
         res.status(403).json({ error: "Administrator access is required." });
         return;

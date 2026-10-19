@@ -56,9 +56,9 @@ function validateBudget(body: unknown): {
 }
 
 // GET /api/budgets — list all budgets
-router.get("/", (req: AuthenticatedRequest, res: Response) => {
+router.get("/", async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const budgets = db
+    const budgets = await db
       .prepare("SELECT * FROM budgets WHERE userId = ? ORDER BY month DESC")
       .all(authenticatedUserId(req));
 
@@ -69,9 +69,9 @@ router.get("/", (req: AuthenticatedRequest, res: Response) => {
 });
 
 // GET /api/budgets/:id — retrieve one budget
-router.get("/:id", (req: AuthenticatedRequest, res: Response) => {
+router.get("/:id", async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const budget = db
+    const budget = await db
       .prepare("SELECT * FROM budgets WHERE id = ? AND userId = ?")
       .get(req.params.id, authenticatedUserId(req));
 
@@ -87,7 +87,7 @@ router.get("/:id", (req: AuthenticatedRequest, res: Response) => {
 });
 
 // POST /api/budgets — create a monthly budget
-router.post("/", (req: AuthenticatedRequest, res: Response) => {
+router.post("/", async (req: AuthenticatedRequest, res: Response) => {
   const validation = validateBudget(req.body);
 
   if (!validation.data) {
@@ -99,7 +99,7 @@ router.post("/", (req: AuthenticatedRequest, res: Response) => {
   const id = randomUUID();
 
   try {
-    db.prepare(`
+    await db.prepare(`
       INSERT INTO budgets (id, month, "limit", userId)
       VALUES (@id, @month, @limit, @userId)
     `).run({
@@ -109,7 +109,7 @@ router.post("/", (req: AuthenticatedRequest, res: Response) => {
       userId: authenticatedUserId(req),
     });
 
-    const savedBudget = db
+    const savedBudget = await db
       .prepare("SELECT * FROM budgets WHERE id = ?")
       .get(id);
 
@@ -117,7 +117,8 @@ router.post("/", (req: AuthenticatedRequest, res: Response) => {
   } catch (error) {
     if (
       error instanceof Error &&
-      error.message.includes("UNIQUE constraint failed")
+      error.message.includes("UNIQUE constraint failed") ||
+      (error as Error & { code?: string }).code === "23505"
     ) {
       res.status(409).json({
         error: "A budget already exists for this month.",
@@ -130,7 +131,7 @@ router.post("/", (req: AuthenticatedRequest, res: Response) => {
 });
 
 // PUT /api/budgets/:id — update an existing budget
-router.put("/:id", (req: AuthenticatedRequest, res: Response) => {
+router.put("/:id", async (req: AuthenticatedRequest, res: Response) => {
   const validation = validateBudget(req.body);
 
   if (!validation.data) {
@@ -141,7 +142,7 @@ router.put("/:id", (req: AuthenticatedRequest, res: Response) => {
   const budget = validation.data;
 
   try {
-    const result = db.prepare(`
+    const result = await db.prepare(`
       UPDATE budgets
       SET month = @month,
           "limit" = @limit,
@@ -159,7 +160,7 @@ router.put("/:id", (req: AuthenticatedRequest, res: Response) => {
       return;
     }
 
-    const updatedBudget = db
+    const updatedBudget = await db
       .prepare("SELECT * FROM budgets WHERE id = ? AND userId = ?")
       .get(req.params.id, authenticatedUserId(req));
 
@@ -167,7 +168,8 @@ router.put("/:id", (req: AuthenticatedRequest, res: Response) => {
   } catch (error) {
     if (
       error instanceof Error &&
-      error.message.includes("UNIQUE constraint failed")
+      error.message.includes("UNIQUE constraint failed") ||
+      (error as Error & { code?: string }).code === "23505"
     ) {
       res.status(409).json({
         error: "A budget already exists for this month.",
@@ -180,9 +182,9 @@ router.put("/:id", (req: AuthenticatedRequest, res: Response) => {
 });
 
 // DELETE /api/budgets/:id — delete a budget
-router.delete("/:id", (req: AuthenticatedRequest, res: Response) => {
+router.delete("/:id", async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const result = db
+    const result = await db
       .prepare("DELETE FROM budgets WHERE id = ? AND userId = ?")
       .run(req.params.id, authenticatedUserId(req));
 

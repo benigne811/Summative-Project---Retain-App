@@ -35,9 +35,9 @@ function validateBudget(body) {
     };
 }
 // GET /api/budgets — list all budgets
-router.get("/", (req, res) => {
+router.get("/", async (req, res) => {
     try {
-        const budgets = db_js_1.default
+        const budgets = await db_js_1.default
             .prepare("SELECT * FROM budgets WHERE userId = ? ORDER BY month DESC")
             .all((0, auth_js_1.authenticatedUserId)(req));
         res.json(budgets);
@@ -47,9 +47,9 @@ router.get("/", (req, res) => {
     }
 });
 // GET /api/budgets/:id — retrieve one budget
-router.get("/:id", (req, res) => {
+router.get("/:id", async (req, res) => {
     try {
-        const budget = db_js_1.default
+        const budget = await db_js_1.default
             .prepare("SELECT * FROM budgets WHERE id = ? AND userId = ?")
             .get(req.params.id, (0, auth_js_1.authenticatedUserId)(req));
         if (!budget) {
@@ -63,7 +63,7 @@ router.get("/:id", (req, res) => {
     }
 });
 // POST /api/budgets — create a monthly budget
-router.post("/", (req, res) => {
+router.post("/", async (req, res) => {
     const validation = validateBudget(req.body);
     if (!validation.data) {
         res.status(400).json({ error: validation.error });
@@ -72,7 +72,7 @@ router.post("/", (req, res) => {
     const budget = validation.data;
     const id = (0, node_crypto_1.randomUUID)();
     try {
-        db_js_1.default.prepare(`
+        await db_js_1.default.prepare(`
       INSERT INTO budgets (id, month, "limit", userId)
       VALUES (@id, @month, @limit, @userId)
     `).run({
@@ -81,14 +81,15 @@ router.post("/", (req, res) => {
             limit: budget.limit,
             userId: (0, auth_js_1.authenticatedUserId)(req),
         });
-        const savedBudget = db_js_1.default
+        const savedBudget = await db_js_1.default
             .prepare("SELECT * FROM budgets WHERE id = ?")
             .get(id);
         res.status(201).json(savedBudget);
     }
     catch (error) {
         if (error instanceof Error &&
-            error.message.includes("UNIQUE constraint failed")) {
+            error.message.includes("UNIQUE constraint failed") ||
+            error.code === "23505") {
             res.status(409).json({
                 error: "A budget already exists for this month.",
             });
@@ -98,7 +99,7 @@ router.post("/", (req, res) => {
     }
 });
 // PUT /api/budgets/:id — update an existing budget
-router.put("/:id", (req, res) => {
+router.put("/:id", async (req, res) => {
     const validation = validateBudget(req.body);
     if (!validation.data) {
         res.status(400).json({ error: validation.error });
@@ -106,7 +107,7 @@ router.put("/:id", (req, res) => {
     }
     const budget = validation.data;
     try {
-        const result = db_js_1.default.prepare(`
+        const result = await db_js_1.default.prepare(`
       UPDATE budgets
       SET month = @month,
           "limit" = @limit,
@@ -122,14 +123,15 @@ router.put("/:id", (req, res) => {
             res.status(404).json({ error: "Budget not found." });
             return;
         }
-        const updatedBudget = db_js_1.default
+        const updatedBudget = await db_js_1.default
             .prepare("SELECT * FROM budgets WHERE id = ? AND userId = ?")
             .get(req.params.id, (0, auth_js_1.authenticatedUserId)(req));
         res.json(updatedBudget);
     }
     catch (error) {
         if (error instanceof Error &&
-            error.message.includes("UNIQUE constraint failed")) {
+            error.message.includes("UNIQUE constraint failed") ||
+            error.code === "23505") {
             res.status(409).json({
                 error: "A budget already exists for this month.",
             });
@@ -139,9 +141,9 @@ router.put("/:id", (req, res) => {
     }
 });
 // DELETE /api/budgets/:id — delete a budget
-router.delete("/:id", (req, res) => {
+router.delete("/:id", async (req, res) => {
     try {
-        const result = db_js_1.default
+        const result = await db_js_1.default
             .prepare("DELETE FROM budgets WHERE id = ? AND userId = ?")
             .run(req.params.id, (0, auth_js_1.authenticatedUserId)(req));
         if (result.changes === 0) {

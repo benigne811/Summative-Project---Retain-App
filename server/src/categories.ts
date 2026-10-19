@@ -51,14 +51,15 @@ function validateCategory(body: unknown): {
 function isUniqueConstraintError(error: unknown): boolean {
   return (
     error instanceof Error &&
-    error.message.includes("UNIQUE constraint failed")
+    error.message.includes("UNIQUE constraint failed") ||
+    (error as Error & { code?: string }).code === "23505"
   );
 }
 
 // GET /api/categories — list all categories
-router.get("/", (_req: Request, res: Response) => {
+router.get("/", async (_req: Request, res: Response) => {
   try {
-    const categories = db
+    const categories = await db
       .prepare("SELECT * FROM categories ORDER BY name ASC")
       .all();
 
@@ -69,9 +70,9 @@ router.get("/", (_req: Request, res: Response) => {
 });
 
 // GET /api/categories/:id — retrieve one category
-router.get("/:id", (req: Request, res: Response) => {
+router.get("/:id", async (req: Request, res: Response) => {
   try {
-    const category = db
+    const category = await db
       .prepare("SELECT * FROM categories WHERE id = ?")
       .get(req.params.id) as Category | undefined;
 
@@ -87,7 +88,7 @@ router.get("/:id", (req: Request, res: Response) => {
 });
 
 // POST /api/categories — create a category
-router.post("/", requireAuth, requireAdmin, (req: Request, res: Response) => {
+router.post("/", requireAuth, requireAdmin, async (req: Request, res: Response) => {
   const validation = validateCategory(req.body);
 
   if (!validation.data) {
@@ -99,7 +100,7 @@ router.post("/", requireAuth, requireAdmin, (req: Request, res: Response) => {
   const id = randomUUID();
 
   try {
-    db.prepare(`
+    await db.prepare(`
       INSERT INTO categories (id, name, color)
       VALUES (@id, @name, @color)
     `).run({
@@ -108,7 +109,7 @@ router.post("/", requireAuth, requireAdmin, (req: Request, res: Response) => {
       color: category.color ?? null,
     });
 
-    const savedCategory = db
+    const savedCategory = await db
       .prepare("SELECT * FROM categories WHERE id = ?")
       .get(id);
 
@@ -126,7 +127,7 @@ router.post("/", requireAuth, requireAdmin, (req: Request, res: Response) => {
 });
 
 // PUT /api/categories/:id — update a category
-router.put("/:id", requireAuth, requireAdmin, (req: Request, res: Response) => {
+router.put("/:id", requireAuth, requireAdmin, async (req: Request, res: Response) => {
   const validation = validateCategory(req.body);
 
   if (!validation.data) {
@@ -137,7 +138,7 @@ router.put("/:id", requireAuth, requireAdmin, (req: Request, res: Response) => {
   const category = validation.data;
 
   try {
-    const result = db.prepare(`
+    const result = await db.prepare(`
       UPDATE categories
       SET name = @name, color = @color
       WHERE id = @id
@@ -152,7 +153,7 @@ router.put("/:id", requireAuth, requireAdmin, (req: Request, res: Response) => {
       return;
     }
 
-    const updatedCategory = db
+    const updatedCategory = await db
       .prepare("SELECT * FROM categories WHERE id = ?")
       .get(req.params.id);
 
@@ -170,23 +171,21 @@ router.put("/:id", requireAuth, requireAdmin, (req: Request, res: Response) => {
 });
 
 // DELETE /api/categories/:id — delete a category
-router.delete("/:id", requireAuth, requireAdmin, (req: Request, res: Response) => {
+router.delete("/:id", requireAuth, requireAdmin, async (req: Request, res: Response) => {
   try {
     if (req.params.id === "other") {
       res.status(400).json({ error: "The default Other category cannot be deleted." });
       return;
     }
-    const removeCategory = db.transaction(() => {
-      const existing = db.prepare("SELECT id FROM categories WHERE id = ?")
+    const deletedCount = await db.transaction(async () => {
+      const existing = await db.prepare("SELECT id FROM categories WHERE id = ?")
         .get(req.params.id);
       if (!existing) return 0;
-      db.prepare("UPDATE expenses SET categoryId = 'other' WHERE categoryId = ?")
+      await db.prepare("UPDATE expenses SET categoryId = 'other' WHERE categoryId = ?")
         .run(req.params.id);
-      return db.prepare("DELETE FROM categories WHERE id = ?")
-        .run(req.params.id).changes;
+      return (await db.prepare("DELETE FROM categories WHERE id = ?")
+        .run(req.params.id)).changes;
     });
-    const deletedCount = removeCategory();
-
     if (deletedCount === 0) {
       res.status(404).json({ error: "Category not found." });
       return;

@@ -22,7 +22,7 @@ Retain is a personal finance application for recording expenses, tracking monthl
 ## Technologies
 
 - **Frontend:** React, TypeScript, Vite, Redux Toolkit, React Redux, Tailwind CSS, Recharts, Lucide.
-- **Backend:** Node.js, TypeScript, Express, SQLite (`better-sqlite3`).
+- **Backend:** Node.js, TypeScript, Express, PostgreSQL (`pg`) in deployment, with SQLite (`better-sqlite3`) for local development.
 - **Authentication:** React Context on the frontend; server-side password hashing and expiring bearer-token sessions on the backend.
 
 ## Local setup
@@ -49,7 +49,7 @@ Start the API in development mode:
 npm run dev
 ```
 
-The SQLite database is created automatically at `server/data/retain.db`. Set `ADMIN_EMAIL` before starting the server, then sign up in the app using that email address to create an administrator account. Normal sign-ups receive the `user` role; role selection is not accepted from the browser.
+For local development, the SQLite database is created automatically at `server/data/retain.db`. For deployment, set `DATABASE_URL` to a PostgreSQL connection string before starting the server. The backend creates its tables and default categories on startup. Set `ADMIN_EMAIL` before starting the server, then sign up in the app using that email address to create an administrator account. Normal sign-ups receive the `user` role; role selection is not accepted from the browser.
 
 ### Frontend
 
@@ -101,4 +101,4 @@ The deployed application uses two Render services:
 
 The repository's `render.yaml` describes a free Render Blueprint for the API and static frontend. For manual service setup, configure the API with root directory `server`, build command `npm ci && npm run build`, start command `npm start`, and health check path `/api/health`. Configure the frontend as a static site with root directory `client`, build command `npm ci && npm run build`, and publish directory `dist`. Set `VITE_API_BASE_URL` on the frontend service to the backend URL, and set `ADMIN_EMAIL` on the backend before registering that address if an administrator account is needed.
 
-The API uses SQLite at `server/data/retain.db` by default. The free Render web service has an ephemeral filesystem: its local SQLite data can be lost when the service restarts, redeploys, or spins down. Free web services can also sleep after a period without traffic. This deployment is suitable for a project demonstration, but it does not provide durable database storage. See Render's [free service limitations](https://render.com/docs/free).
+The deployed API uses PostgreSQL through the `DATABASE_URL` environment variable. Configure it on the `retain-api` Render service with the PostgreSQL connection string from your database provider. Keep the URL private and never commit it to the repository. If `DATABASE_URL` is not set, the backend falls back to local SQLite; that fallback is not durable on Render's free filesystem. The free Render API may also sleep when idle. See Render's [free service limitations](https://render.com/docs/free).

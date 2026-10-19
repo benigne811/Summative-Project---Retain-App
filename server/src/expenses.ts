@@ -96,9 +96,9 @@ function validateExpense(body: unknown): {
 }
 
 // GET /api/expenses — list all expenses
-router.get("/", (req: AuthenticatedRequest, res: Response) => {
+router.get("/", async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const expenses = db
+    const expenses = await db
       .prepare("SELECT * FROM expenses WHERE userId = ? ORDER BY date DESC, createdAt DESC")
       .all(authenticatedUserId(req));
 
@@ -109,9 +109,9 @@ router.get("/", (req: AuthenticatedRequest, res: Response) => {
 });
 
 // GET /api/expenses/:id — retrieve one expense
-router.get("/:id", (req: AuthenticatedRequest, res: Response) => {
+router.get("/:id", async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const expense = db
+    const expense = await db
       .prepare("SELECT * FROM expenses WHERE id = ? AND userId = ?")
       .get(req.params.id, authenticatedUserId(req)) as Expense | undefined;
 
@@ -127,7 +127,7 @@ router.get("/:id", (req: AuthenticatedRequest, res: Response) => {
 });
 
 // POST /api/expenses — create an expense
-router.post("/", (req: AuthenticatedRequest, res: Response) => {
+router.post("/", async (req: AuthenticatedRequest, res: Response) => {
   const validation = validateExpense(req.body);
 
   if (!validation.data) {
@@ -139,7 +139,7 @@ router.post("/", (req: AuthenticatedRequest, res: Response) => {
   const id = randomUUID();
 
   try {
-    db.prepare(`
+    await db.prepare(`
       INSERT INTO expenses (
         id, title, description, amount, categoryId,
         date, paymentMethod, notes, userId
@@ -160,7 +160,7 @@ router.post("/", (req: AuthenticatedRequest, res: Response) => {
       userId: authenticatedUserId(req),
     });
 
-    const savedExpense = db
+    const savedExpense = await db
       .prepare("SELECT * FROM expenses WHERE id = ?")
       .get(id);
 
@@ -171,7 +171,7 @@ router.post("/", (req: AuthenticatedRequest, res: Response) => {
 });
 
 // PUT /api/expenses/:id — update an expense
-router.put("/:id", (req: AuthenticatedRequest, res: Response) => {
+router.put("/:id", async (req: AuthenticatedRequest, res: Response) => {
   const validation = validateExpense(req.body);
 
   if (!validation.data) {
@@ -182,7 +182,7 @@ router.put("/:id", (req: AuthenticatedRequest, res: Response) => {
   const expense = validation.data;
 
   try {
-    const result = db.prepare(`
+    const result = await db.prepare(`
       UPDATE expenses
       SET
         title = @title,
@@ -211,7 +211,7 @@ router.put("/:id", (req: AuthenticatedRequest, res: Response) => {
       return;
     }
 
-    const updatedExpense = db
+    const updatedExpense = await db
       .prepare("SELECT * FROM expenses WHERE id = ? AND userId = ?")
       .get(req.params.id, authenticatedUserId(req));
 
@@ -222,9 +222,9 @@ router.put("/:id", (req: AuthenticatedRequest, res: Response) => {
 });
 
 // DELETE /api/expenses/:id — delete an expense
-router.delete("/:id", (req: AuthenticatedRequest, res: Response) => {
+router.delete("/:id", async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const result = db
+    const result = await db
       .prepare("DELETE FROM expenses WHERE id = ? AND userId = ?")
       .run(req.params.id, authenticatedUserId(req));
 

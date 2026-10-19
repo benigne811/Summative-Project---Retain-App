@@ -12,6 +12,8 @@ services:
     envVars:
       - key: ADMIN_EMAIL
         sync: false
+      - key: DATABASE_URL
+        sync: false
 
   - type: web
     name: retain-client

@@ -32,12 +32,13 @@ function validateCategory(body) {
 }
 function isUniqueConstraintError(error) {
     return (error instanceof Error &&
-        error.message.includes("UNIQUE constraint failed"));
+        error.message.includes("UNIQUE constraint failed") ||
+        error.code === "23505");
 }
 // GET /api/categories — list all categories
-router.get("/", (_req, res) => {
+router.get("/", async (_req, res) => {
     try {
-        const categories = db_js_1.default
+        const categories = await db_js_1.default
             .prepare("SELECT * FROM categories ORDER BY name ASC")
             .all();
         res.json(categories);
@@ -47,9 +48,9 @@ router.get("/", (_req, res) => {
     }
 });
 // GET /api/categories/:id — retrieve one category
-router.get("/:id", (req, res) => {
+router.get("/:id", async (req, res) => {
     try {
-        const category = db_js_1.default
+        const category = await db_js_1.default
             .prepare("SELECT * FROM categories WHERE id = ?")
             .get(req.params.id);
         if (!category) {
@@ -63,7 +64,7 @@ router.get("/:id", (req, res) => {
     }
 });
 // POST /api/categories — create a category
-router.post("/", auth_js_1.requireAuth, auth_js_1.requireAdmin, (req, res) => {
+router.post("/", auth_js_1.requireAuth, auth_js_1.requireAdmin, async (req, res) => {
     const validation = validateCategory(req.body);
     if (!validation.data) {
         res.status(400).json({ error: validation.error });
@@ -72,7 +73,7 @@ router.post("/", auth_js_1.requireAuth, auth_js_1.requireAdmin, (req, res) => {
     const category = validation.data;
     const id = (0, node_crypto_1.randomUUID)();
     try {
-        db_js_1.default.prepare(`
+        await db_js_1.default.prepare(`
       INSERT INTO categories (id, name, color)
       VALUES (@id, @name, @color)
     `).run({
@@ -80,7 +81,7 @@ router.post("/", auth_js_1.requireAuth, auth_js_1.requireAdmin, (req, res) => {
             name: category.name,
             color: category.color ?? null,
         });
-        const savedCategory = db_js_1.default
+        const savedCategory = await db_js_1.default
             .prepare("SELECT * FROM categories WHERE id = ?")
             .get(id);
         res.status(201).json(savedCategory);
@@ -96,7 +97,7 @@ router.post("/", auth_js_1.requireAuth, auth_js_1.requireAdmin, (req, res) => {
     }
 });
 // PUT /api/categories/:id — update a category
-router.put("/:id", auth_js_1.requireAuth, auth_js_1.requireAdmin, (req, res) => {
+router.put("/:id", auth_js_1.requireAuth, auth_js_1.requireAdmin, async (req, res) => {
     const validation = validateCategory(req.body);
     if (!validation.data) {
         res.status(400).json({ error: validation.error });
@@ -104,7 +105,7 @@ router.put("/:id", auth_js_1.requireAuth, auth_js_1.requireAdmin, (req, res) => 
     }
     const category = validation.data;
     try {
-        const result = db_js_1.default.prepare(`
+        const result = await db_js_1.default.prepare(`
       UPDATE categories
       SET name = @name, color = @color
       WHERE id = @id
@@ -117,7 +118,7 @@ router.put("/:id", auth_js_1.requireAuth, auth_js_1.requireAdmin, (req, res) => 
             res.status(404).json({ error: "Category not found." });
             return;
         }
-        const updatedCategory = db_js_1.default
+        const updatedCategory = await db_js_1.default
             .prepare("SELECT * FROM categories WHERE id = ?")
             .get(req.params.id);
         res.json(updatedCategory);
@@ -133,23 +134,22 @@ router.put("/:id", auth_js_1.requireAuth, auth_js_1.requireAdmin, (req, res) => 
     }
 });
 // DELETE /api/categories/:id — delete a category
-router.delete("/:id", auth_js_1.requireAuth, auth_js_1.requireAdmin, (req, res) => {
+router.delete("/:id", auth_js_1.requireAuth, auth_js_1.requireAdmin, async (req, res) => {
     try {
         if (req.params.id === "other") {
             res.status(400).json({ error: "The default Other category cannot be deleted." });
             return;
         }
-        const removeCategory = db_js_1.default.transaction(() => {
-            const existing = db_js_1.default.prepare("SELECT id FROM categories WHERE id = ?")
+        const deletedCount = await db_js_1.default.transaction(async () => {
+            const existing = await db_js_1.default.prepare("SELECT id FROM categories WHERE id = ?")
                 .get(req.params.id);
             if (!existing)
                 return 0;
-            db_js_1.default.prepare("UPDATE expenses SET categoryId = 'other' WHERE categoryId = ?")
+            await db_js_1.default.prepare("UPDATE expenses SET categoryId = 'other' WHERE categoryId = ?")
                 .run(req.params.id);
-            return db_js_1.default.prepare("DELETE FROM categories WHERE id = ?")
-                .run(req.params.id).changes;
+            return (await db_js_1.default.prepare("DELETE FROM categories WHERE id = ?")
+                .run(req.params.id)).changes;
         });
-        const deletedCount = removeCategory();
         if (deletedCount === 0) {
             res.status(404).json({ error: "Category not found." });
             return;

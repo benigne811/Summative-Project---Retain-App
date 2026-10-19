@@ -18,13 +18,13 @@ const app = (0, express_1.default)();
 const PORT = Number(process.env.PORT) || 5000;
 app.use((0, cors_1.default)());
 app.use(express_1.default.json());
-app.get("/api/health", (_req, res) => {
+app.get("/api/health", async (_req, res) => {
     try {
-        const result = db_js_1.default.prepare("SELECT 1 AS connected").get();
+        await db_js_1.default.ping();
         res.status(200).json({
             status: "ok",
             message: "Retain backend is running!",
-            database: result.connected === 1 ? "connected" : "disconnected",
+            database: "connected",
         });
     }
     catch {
@@ -39,6 +39,8 @@ app.use("/api/admin", admin_js_1.default);
 app.use("/api/expenses", auth_js_1.requireAuth, expenses_js_1.default);
 app.use("/api/budgets", auth_js_1.requireAuth, budgets_js_1.default);
 app.use("/api/categories", categories_js_1.default);
-app.listen(PORT, () => {
-    console.log(`Retain backend running at http://localhost:${PORT}`);
-});
+async function start() {
+    await db_js_1.default.initialize();
+    app.listen(PORT, () => console.log(`Retain backend running at http://localhost:${PORT}`));
+}
+void start();
